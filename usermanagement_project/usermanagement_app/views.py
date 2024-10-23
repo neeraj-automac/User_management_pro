@@ -16,7 +16,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from .serializers import *
 from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.core import serializers
 import json
 from datetime import datetime, time, timedelta,date
@@ -649,15 +649,19 @@ def Broadcast_pagination(request):
 
 
 
+
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def register_user(request):
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [IsAuthenticated]
+    # authentication_classes = []  # No authentication required
+    # permission_classes = [AllowAny]
     if request.method == 'POST':
        serializer = User_Registration_Serializer(data=request.data)
        if serializer.is_valid():
            serializer.save()
-           return JsonResponse(serializer.data)
-       return JsonResponse(serializer.errors)
+           return JsonResponse({"status":"user_registered_successfully"})
+       return JsonResponse({"status":"failed_to_register"})
 
 

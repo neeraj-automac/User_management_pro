@@ -36,10 +36,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://192.168.29.68:3000',
     'http://192.168.29.72:8000',
     'http://192.168.1.109:8000',
-
-
-
-
+    'https://main.d1rxm8efi4ljju.amplifyapp.com'
 
 
     ]

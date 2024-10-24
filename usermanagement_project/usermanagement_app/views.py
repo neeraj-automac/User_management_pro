@@ -657,11 +657,14 @@ def register_user(request):
     # permission_classes = [IsAuthenticated]
     # authentication_classes = []  # No authentication required
     # permission_classes = [AllowAny]
+    print("****", request.data)
     if request.method == 'POST':
+
        serializer = User_Registration_Serializer(data=request.data)
        if serializer.is_valid():
            serializer.save()
            return JsonResponse({"status":"user_registered_successfully"})
-       return JsonResponse({"status":"failed_to_register"})
+       # return JsonResponse({"status":"failed_to_register"})
+       return JsonResponse(serializer.errors)
 
 

@@ -657,7 +657,7 @@ def register_user(request):
     # permission_classes = [IsAuthenticated]
     # authentication_classes = []  # No authentication required
     # permission_classes = [AllowAny]
-    print("****", request.data)
+    # print("****", request.data)
     if request.method == 'POST':
 
        serializer = User_Registration_Serializer(data=request.data)

@@ -2,10 +2,10 @@ from rest_framework import serializers
 from .models import *
 
 
-class User_Registration_Serializer(serializers.ModelSerializer):
-   class Meta:
-       model = User_registration
-       fields = ['name', 'category', 'mobile_num', 'email', 'location', 'age', 'gender']
+# class User_Registration_Serializer(serializers.ModelSerializer):
+#    class Meta:
+#        model = User_registration
+#        fields = ['name', 'category', 'mobile_num', 'email', 'location', 'age', 'gender']
 
 
 class LoginSerializer(serializers.ModelSerializer):
@@ -46,10 +46,56 @@ class user_serializer(serializers.ModelSerializer):
 
 
 
+# class User_create_Serializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User
+#         fields = ['username', 'password']
+
 class User_create_Serializer(serializers.ModelSerializer):
+    # Additional fields for User_details
+    name = serializers.CharField(max_length=50)
+    contact_no = serializers.IntegerField()
+    business_email = serializers.EmailField()
+    location = serializers.CharField(max_length=30)
+    age = serializers.IntegerField()
+    gender = serializers.CharField(max_length=10)
+    category = serializers.CharField(max_length=30)  # Assuming category is passed as an ID
+    user_status=serializers.CharField(max_length=30)
+
     class Meta:
         model = User
-        fields = ['username', 'password']
+        fields = ['username',  'name', 'contact_no', 'business_email',
+                  'location', 'age', 'gender', 'category','user_status']
+        # extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        # Pop fields for User_details
+        user_details_data = {
+            'name': validated_data.pop('name'),
+            'contact_no': validated_data.pop('contact_no'),
+            'business_email': validated_data.pop('business_email'),
+            'location': validated_data.pop('location'),
+            'age': validated_data.pop('age'),
+            'gender': validated_data.pop('gender'),
+            'category': validated_data.pop('category'),
+            'user_status':validated_data.pop('user_status')
+        }
+
+        # Create User
+        user = User.objects.create_user(username=validated_data['username'], password="user@123")
+
+        # Create User_details
+        category = Category.objects.get(category=user_details_data.pop('category'))
+        print("category____",category)
+
+        User_details.objects.create(
+            user_id=user,
+            role="customer",
+            category=category,
+
+            **user_details_data
+        )
+        return user
 
 
 class User_doj_Serializer(serializers.ModelSerializer):
@@ -61,7 +107,7 @@ class User_doj_Serializer(serializers.ModelSerializer):
 class UserDetails_create_Serializer(serializers.ModelSerializer):
     class Meta:
         model = User_details
-        fields = ['user_id', 'name', 'contact_no', 'business_email', 'location', 'user_status']
+        fields = ['user_id', 'name', 'contact_no', 'business_email', 'location', 'user_status','category']
 
 
 class UserDetails_pagination_Serializer(serializers.ModelSerializer):

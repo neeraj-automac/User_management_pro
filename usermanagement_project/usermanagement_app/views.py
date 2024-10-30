@@ -49,43 +49,49 @@ def all_users_status(request):
 
 # hct
 @api_view(['POST', "DELETE"])
-def add_delete_users(request):
+def delete_users(request):
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [IsAuthenticated]
     # if request.user.is_authenticated:
-    if request.method == 'POST':
-        username_for_user_table = request.data.get('business_email')
-        before_at_the_rate_part, domain = username_for_user_table.split("@")
-        final_username_for_user_table = f"{before_at_the_rate_part}_hct@{domain}"
-        print('*********', final_username_for_user_table)
-        print(request.data)
-        user_create_Serializer = User_create_Serializer(data={"username": final_username_for_user_table,
-                                                              "password": "hct_user"})  # request.data.get('password')
-        # User.objects.get
-        # new_user=User.objects.create(username="neerajpynam@gmail.com",password="Neeraj@584")
-        # new_user.save()
-        # new_user_details=User_details.objects.create(user_id_id="neerajpynam@gmail",name="neeru",contact_no=123456789,business_email="neerajpynam@gmail.com",location="hyd")
-        # new_user_details.save()
+    # if request.method == 'POST':
+    #     serializer = User_create_Serializer(data={"username":request.data.get("email"),"password":"user@123"})
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return JsonResponse({"status": "user_registered_successfully"})
+    #     return JsonResponse(serializer.errors)
+        # # username_for_user_table = request.data.get('business_email')
+        # # before_at_the_rate_part, domain = username_for_user_table.split("@")
+        # # final_username_for_user_table = f"{before_at_the_rate_part}_hct@{domain}"
+        # final_username_for_user_table=request.data.get('business_email')
+        # print('*********', final_username_for_user_table)
+        # print(request.data)
+        # user_create_Serializer = User_create_Serializer(data={"username": final_username_for_user_table,
+        #                                                       "password": "user@123"})  # request.data.get('password')
+        # # User.objects.get
+        # # new_user=User.objects.create(username="neerajpynam@gmail.com",password="Neeraj@584")
+        # # new_user.save()
+        # # new_user_details=User_details.objects.create(user_id_id="neerajpynam@gmail",name="neeru",contact_no=123456789,business_email="neerajpynam@gmail.com",location="hyd")
+        # # new_user_details.save()
+        #
+        # if user_create_Serializer.is_valid():
+        #     created_user = user_create_Serializer.save()
+        #     userdetails_create_Serializer = UserDetails_create_Serializer(
+        #         data={"user_id": created_user.pk, "name": request.data.get('name'),
+        #               "contact_no": request.data.get('contact_no'),
+        #               "business_email": request.data.get('business_email'),
+        #               "location": request.data.get('location'), "user_status": request.data.get('user_status'),"category":request.data.get('category')})
+        #
+        #     if userdetails_create_Serializer.is_valid():
+        #         userdetails_create_Serializer.save()
+        #         return JsonResponse({"status": "created"})
+        #
+        #     else:
+        #         print('ud', userdetails_create_Serializer.errors)
+        #
+        # else:
+        #     print('errors------------', user_create_Serializer.errors)
 
-        if user_create_Serializer.is_valid():
-            created_user = user_create_Serializer.save()
-            userdetails_create_Serializer = UserDetails_create_Serializer(
-                data={"user_id": created_user.pk, "name": request.data.get('name'),
-                      "contact_no": request.data.get('contact_no'),
-                      "business_email": request.data.get('business_email'),
-                      "location": request.data.get('location'), "user_status": request.data.get('user_status')})
-
-            if userdetails_create_Serializer.is_valid():
-                userdetails_create_Serializer.save()
-                return JsonResponse({"status": "created"})
-
-            else:
-                print('ud', userdetails_create_Serializer.errors)
-
-        else:
-            print('errors------------', user_create_Serializer.errors)
-
-    elif request.method == "DELETE":
+    if request.method == "DELETE":
 
         try:
             user_to_be_deleted = User_details.objects.get(business_email=request.query_params.get("business_email"))
@@ -156,7 +162,8 @@ def pagination(request):
             return JsonResponse({"status": "invalid_page_number"})
 
         # Get the list of contacts filtered by a condition
-        contact_list = User_details.objects.filter(user_id__username__contains='_hct').order_by('-id')
+        # contact_list = User_details.objects.filter(user_id__username__contains='_hct').order_by('-id')
+        contact_list = User_details.objects.all().order_by('-id')
         print('contact_list', contact_list)
 
         # Paginate the queryset
@@ -226,6 +233,8 @@ def edit_user_details_hct(request):
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [IsAuthenticated]
     # if request.user.is_authenticated:
+    # category_id=Category.objects.filter(id=request.data.get("category"))
+    # print("category_id",category_id)
     if request.method == 'PUT':
 
         ds = request.data  # expects a dictionary with user details as per the user_details model
@@ -264,6 +273,21 @@ def edit_user_details_hct(request):
                     rec.user_status = ds[item]
                 else:
                     rec.user_status = rec.user_status
+
+                if item == "age" and ds[item] != "":
+                    rec.age = ds[item]
+                else:
+                    rec.age = rec.age
+
+                if item == "gender" and ds[item] != "":
+                    rec.gender = ds[item]
+                else:
+                    rec.gender = rec.gender
+
+                # if item == "category" and ds[item] != "":
+                #     rec.category =category_id
+                # else:
+                #     rec.category = rec.category
 
                 rec.save()
                 # print("item found -->", item)
@@ -660,7 +684,8 @@ def register_user(request):
     # print("****", request.data)
     if request.method == 'POST':
 
-       serializer = User_Registration_Serializer(data=request.data)
+       # serializer = User_Registration_Serializer(data=request.data)
+       serializer = User_create_Serializer(data=request.data)
        if serializer.is_valid():
            serializer.save()
            return JsonResponse({"status":"user_registered_successfully"})

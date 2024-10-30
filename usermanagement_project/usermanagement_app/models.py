@@ -11,6 +11,13 @@ from django.db.models import Min, Max
 from django.core.mail import send_mail
 from django.conf import settings
 
+
+class Category(models.Model):
+    category=models.CharField(max_length=50,blank=False)
+
+    def __str__(self):
+        return self.category
+
 class User_details(models.Model):
     objects = models.Manager()
     user_id = models.OneToOneField(User, on_delete=models.CASCADE )
@@ -19,13 +26,16 @@ class User_details(models.Model):
     name=models.CharField(max_length = 50,blank=False)
     contact_no = models.BigIntegerField()
     user_status=models.CharField(max_length = 50,blank=True)
-    company = models.CharField(max_length = 30,blank=True)#remove?
+    category=models.ForeignKey(Category, on_delete=models.CASCADE)
+    # company = models.CharField(max_length = 30,blank=True)#remove?
     business_email = models.EmailField(max_length = 254,blank=False)
-    years_of_experience = models.PositiveSmallIntegerField(null=True, blank=True)#remove?
-    job_position = models.CharField(max_length = 30,blank=True)#remove?
+    # years_of_experience = models.PositiveSmallIntegerField(null=True, blank=True)#remove?
+    # job_position = models.CharField(max_length = 30,blank=True)#remove?
     location = models.CharField(max_length = 30,blank=False)
-    otp = models.CharField(max_length=255, unique=True, blank=True, null=True)
-    course_id=models.IntegerField(null=True, blank=True)
+    age = models.PositiveIntegerField()
+    gender = models.CharField(max_length=150)
+    # otp = models.CharField(max_length=255, unique=True, blank=True, null=True)
+    # course_id=models.IntegerField(null=True, blank=True)
 
 
 
@@ -33,20 +43,20 @@ class User_details(models.Model):
     def __str__(self):
         return self.user_id.username
 
-
-class User_registration(models.Model):
-
-   name = models.CharField(max_length=100)
-   category = models.CharField(max_length=100)
-   mobile_num = models.BigIntegerField()
-   email = models.EmailField(unique=True)
-   location = models.CharField(max_length=100)
-   age = models.PositiveIntegerField()
-   gender = models.CharField(max_length=150)
-
-
-   def __str__(self):
-       return self.name
+#
+# class User_registration(models.Model):
+#
+#    name = models.CharField(max_length=100)
+#    category = models.CharField(max_length=100)
+#    mobile_num = models.BigIntegerField()
+#    email = models.EmailField(unique=True)
+#    location = models.CharField(max_length=100)
+#    age = models.PositiveIntegerField()
+#    gender = models.CharField(max_length=150)
+#
+#
+#    def __str__(self):
+#        return self.name
 
 
 
@@ -114,6 +124,14 @@ class Broadcast(models.Model):
         return self.follow_up
 
 
+
+
+
+
+
+
+
+
 @receiver(post_save, sender=Broadcast)
 def send_broadcast(sender, instance, created, **kwargs):
     if created:
@@ -167,19 +185,22 @@ def send_broadcast(sender, instance, created, **kwargs):
 
 
 
-@receiver(post_save, sender=User_registration)
-def send_broadcast(sender, instance, created, **kwargs):
-    if created:
-        user = User.objects.create_user(username=instance.name, password="user@123")
-        # print(user.is_staff)
-        user.save()
-        user_details = User_details.objects.create(user_id=user,role="customer",name=instance.name,contact_no=instance.mobile_num,user_status="",company="",business_email=instance.email,years_of_experience=None,job_position="",location=instance.location,otp=None,course_id=None)
-        user_details.save()
-        print('user_created')
-        print("created in user_reg")
-
-
-
-    else:
-
-        print("edited in user reg models.py")
+# @receiver(post_save, sender=User_registration)
+# @receiver(post_save, sender=User)
+# def send_broadcast(sender, instance, created, **kwargs):
+#     if created:
+#         # user = User.objects.create_user(username=instance.name, password="user@123")
+#         user = instance.username
+#         # print(user.is_staff)
+#         # user.save()
+#         # user_details = User_details.objects.create(user_id=user,role="customer",name=instance.name,contact_no=instance.mobile_num,user_status="",company="",business_email=instance.email,years_of_experience=None,job_position="",location=instance.location,age=instance.age,gender=instance.age,category=instance.category)
+#         user_details = User_details.objects.create(user_id=user,role="customer",name=instance.name,contact_no=instance.mobile_num,user_status="active",business_email=instance.email,location=instance.location,age=instance.age,gender=instance.gender,category=instance.category)
+#         user_details.save()
+#         print('user_created')
+#         print("created in user_reg")
+#
+#
+#
+#     else:
+#
+#         print("edited in user reg models.py")

@@ -42,11 +42,14 @@ admin.site.register(User,UserDetailsAdmin)
 class User_detailsAdmin(admin.ModelAdmin):
     list_display = ['id','name']
 
-@admin.register(User_registration)
-class User_registrationAdmin(admin.ModelAdmin):
-    list_display = ["name","category","email","gender"]
+# @admin.register(User_registration)
+# class User_registrationAdmin(admin.ModelAdmin):
+#     list_display = ["name","category","email","gender"]
 
 
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ['id','category']
 
 
 

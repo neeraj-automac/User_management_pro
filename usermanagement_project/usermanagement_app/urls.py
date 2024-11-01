@@ -20,6 +20,7 @@ urlpatterns = [
     path('update_broadcast/', views.update_broadcast, name='update_broadcast'),
     path('delete_broadcast/', views.delete_broadcast, name='delete_broadcast'),
     path('hct_template_dd/', views.hct_template_dd, name='hct_template_dd'),
+    path('hct_category_dd/', views.hct_category_dd, name='hct_template_dd'),
     path('broadcast_pagination/',views.Broadcast_pagination,name='Broadcast_pagination'),
 
 

@@ -284,10 +284,14 @@ def edit_user_details_hct(request):
                 else:
                     rec.gender = rec.gender
 
-                # if item == "category" and ds[item] != "":
-                #     rec.category =category_id
-                # else:
-                #     rec.category = rec.category
+                if item == "category" and ds[item] != "":
+                    try:
+                        category_id = Category.objects.get(category=ds[item])
+                        rec.category = category_id
+                    except Category.DoesNotExist:
+                        return JsonResponse({"status": "category_not_found"})
+                else:
+                    rec.category = rec.category
 
                 rec.save()
                 # print("item found -->", item)
@@ -693,3 +697,23 @@ def register_user(request):
        return JsonResponse(serializer.errors)
 
 
+
+
+@api_view(['GET'])
+def hct_category_dd(request):
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
+    # if request.user.is_authenticated:
+    active_users_list = []
+    if request.method == 'GET':
+        categories = Category.objects.all()
+        print('categories', categories, type(categories))
+        categories_serializer = category_Serializer(categories, many=True)
+        print(categories_serializer)
+        categories_serializer_data = categories_serializer.data
+        print('//////////////', categories_serializer_data)
+
+        categories_list = [{'category_id': category['id'], 'category': category['category']} for category in
+                             categories_serializer_data]
+
+        return JsonResponse({"category_list": categories_list})

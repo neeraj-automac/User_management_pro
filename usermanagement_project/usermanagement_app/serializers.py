@@ -113,6 +113,7 @@ class UserDetails_create_Serializer(serializers.ModelSerializer):
 class UserDetails_pagination_Serializer(serializers.ModelSerializer):
     # ----in order to access other model fileds in same serializer u need to use nested serializer here we have
     date_joined = serializers.DateTimeField(source='user_id.date_joined', read_only=True)
+    username = serializers.DateTimeField(source='user_id.username', read_only=True)
     category=serializers.DateTimeField(source='category.category', read_only=True)
     # date_joined = User_doj_Serializer(many=True, read_only=True)
     # print('--------------------date_joined',date_joined)
@@ -124,7 +125,7 @@ class UserDetails_pagination_Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = User_details
-        fields = ['date_joined', 'name', 'contact_no', 'user_status', 'business_email', 'location','category']
+        fields = ['date_joined', 'name', 'contact_no', 'user_status', 'business_email', 'location','category','age','gender','username']
 
 
 class UserDetails_business_email_Serializer(serializers.ModelSerializer):

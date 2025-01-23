@@ -28,14 +28,20 @@ SECRET_KEY = 'django-insecure-8&jk1&!b(j^1c)@l2)1p4h+d7pytk(r+(tl-m%y211l3s5w#mw
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.29.220","127.0.0.1","192.168.0.106","13.235.2.182","hct.automactechnologies.in"]
+ALLOWED_HOSTS = ["192.168.29.221","127.0.0.1","192.168.0.106","13.235.2.182","52.66.202.25","192.168.137.186","hct.automactechnologies.in","192.168.46.147"]
 
 CORS_ALLOWED_ORIGINS = [
 
     'http://localhost:3000',
     'http://192.168.29.68:3000',
     'http://192.168.29.72:8000',
-    'http://192.168.1.109:8000',
+    'http://192.168.29.74:3002',
+    'http://localhost:3001',
+    'http://192.168.1.109:3001',
+    'http://192.168.46.16:3001',
+    'http://192.168.46.43:3000',
+    'http://192.168.29.133:3000',
+
     'https://main.d1rxm8efi4ljju.amplifyapp.com'
 
 
@@ -165,6 +171,15 @@ USE_I18N = True
 
 USE_TZ = True
 
+
+
+#email------------------
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "neerajpynam@gmail.com"
+EMAIL_HOST_PASSWORD = "tkekaspbkdfjanap"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/

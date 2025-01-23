@@ -1,6 +1,7 @@
 from datetime import timedelta
 from datetime import time
 from django.contrib.postgres.fields import ArrayField
+import requests
 from django.db import models
 from django.db.models.fields import PositiveSmallIntegerField
 from django.db.models.fields import EmailField
@@ -10,6 +11,10 @@ from django.dispatch import receiver
 from django.db.models import Min, Max
 from django.core.mail import send_mail
 from django.conf import settings
+from django.http import JsonResponse
+import json
+
+from unicodedata import category
 
 
 class Category(models.Model):
@@ -99,7 +104,10 @@ class Broadcast(models.Model):
     # user_detail = models.ForeignKey(User_details, on_delete=models.CASCADE)
     # user_template= models.ForeignKey(Template, on_delete=models.CASCADE)
     template=models.ForeignKey(Template, on_delete=models.CASCADE)
-    users=models.ManyToManyField(User_details)
+    # users=models.ManyToManyField(User_details,blank=True)
+    users = models.ManyToManyField(User_details, blank=True)
+    category = models.ManyToManyField(Category, blank=True)
+
     frequency=models.CharField(max_length=150)
     follow_up=models.CharField(max_length=50,blank=False)
     time=models.TimeField(null=True, blank=True)
@@ -141,40 +149,185 @@ def send_broadcast(sender, instance, created, **kwargs):
     else:
         print("edited in models.py")
         if instance.sent_status==True:
-
-
-            print("broadcast_usersssss", instance.users.all())
-            email_addresses = list(instance.users.values_list('business_email', flat=True))
-            print("User email addresses:", email_addresses, type(email_addresses))
-            contact_numbers = list(instance.users.values_list('contact_no', flat=True))
-            print("User contact_numbers:", contact_numbers, type(contact_numbers))
-            print(instance.template.template_name)
-            print(instance.template.template_heading)
-            print(instance.template.template_body)
-            # email_body = f'''<p>instance.template.template_heading</p>'''
-            if instance.frequency == "once" and instance.follow_up == "mail":
+            def mail_field():
+                print("broadcast_usersssss", instance.users.all())
+                email_addresses = list(instance.users.values_list('business_email', flat=True))
+                print("User email addresses:", email_addresses, type(email_addresses))
+                # contact_numbers = list(instance.users.values_list('contact_no', flat=True))
+                # print("User contact_numbers:", contact_numbers, type(contact_numbers))
+                print(instance.template.template_name)
+                print(instance.template.template_heading)
+                print(instance.template.template_body)
                 print("sending once via mail")
                 send_mail(instance.template.template_heading, '', from_email=settings.EMAIL_HOST_USER,
                           recipient_list=email_addresses, html_message=instance.template.template_body)
                 print("sended")
 
-            elif instance.frequency == "periodically" and instance.follow_up == "mail":
-                print("sending periodically via mail by calling celery")
+            def mail_category():
+                category_users=User_details.objects.filter(category=instance.category)
+                print('category_users',category_users)
+                email_addresses = list(category_users)
+                print("User email addresses:", email_addresses, type(email_addresses))
+                # contact_numbers = list(instance.users.values_list('contact_no', flat=True))
+                # print("User contact_numbers:", contact_numbers, type(contact_numbers))
+                print(instance.template.template_name)
+                print(instance.template.template_heading)
+                print(instance.template.template_body)
+                print("sending once via mail")
+                send_mail(instance.template.template_heading, '', from_email=settings.EMAIL_HOST_USER,
+                          recipient_list=email_addresses, html_message=instance.template.template_body)
+                print("sended")
+                pass
+
+            def whatsapp_user_num_list():
+                print("Sending messages via WhatsApp...")
+                try:
+                    num_list = list(instance.users.values_list('contact_no', flat=True))
+                    print(f"Numbers to process: {num_list}")
+
+                    responses = []  # To store responses for each number
+
+                    for number in num_list:
+                        url = "https://graph.facebook.com/v21.0/422738437582013/messages"
+                        payload = json.dumps({
+                            "messaging_product": "whatsapp",
+                            "to": number,
+                            "type": "template",
+                            "template": {
+                                "name": "hello_world",
+                                "language": {
+                                    "code": "en_US"
+                                }
+                            }
+                        })
+                        headers = {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer EAAMY4TVLDQ4BOZCGQmE23O38pLfZA8Ps9TtRhbhLzaJf8doVO8oTZAKAZARUWbNP3WundiNb1xWY4h6xwgH3AeFbGrixNfXtXpxp0wZApTc7iNZAZA9Ry3ZAm1lv5bDV4LkZBgN32Y2eU17QGOx1j14usIEea6KqKrNNDGNVgtuXcbkWU2NFixgTkRLBFKdm8Pxo214Qkt0BtHRx57THxZBbpcUgqqmZBSp'
+                        }
+
+                        response = requests.post(url, headers=headers, data=payload)
+                        print(f"Response for {number}: {response.status_code}, {response.text}")
+                        responses.append({
+                            "number": number,
+                            "status_code": response.status_code,
+                            "response": response.json() if response.status_code == 200 else response.text
+                        })
+
+                        if response.status_code != 200:
+                            print(f"Failed to send message to {number}: {response.status_code}")
+
+                    # Log or return all responses after the loop completes
+                    print("All responses:", responses)
+                    return JsonResponse({"responses": responses}, safe=False)
+
+                except Exception as e:
+                    print(f"Error occurred: {e}")
+                    return JsonResponse({'error': str(e)})
+
+            def whatsapp_category_num_list():
+                category_contact_numbers = User_details.objects.filter(category=instance.category).values_list('contact_no', flat=True)
+                # print('category_users', category_users)
+                # contact_numbers = list(category_users)
+                print("User contact_numbers:", category_contact_numbers, type(category_contact_numbers))
+                # contact_numbers = list(instance.users.values_list('contact_no', flat=True))
+                # print("User contact_numbers:", contact_numbers, type(contact_numbers))
+                print("Sending messages via WhatsApp...")
+                try:
+                    # num_list = list(instance.users.values_list('contact_no', flat=True))
+                    # print(f"Numbers to process: {num_list}")
+
+                    responses = []  # To store responses for each number
+
+                    for number in category_contact_numbers:
+                        url = "https://graph.facebook.com/v21.0/422738437582013/messages"
+                        payload = json.dumps({
+                            "messaging_product": "whatsapp",
+                            "to": number,
+                            "type": "template",
+                            "template": {
+                                "name": "hello_world",
+                                "language": {
+                                    "code": "en_US"
+                                }
+                            }
+                        })
+                        headers = {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer EAAMY4TVLDQ4BOyMBcLQ2wq0RxZBgeGo79J5Bb2h60Dl4TZC0ZCkZCLVHKknfilC33NQ6NKZBxXEFLc54t4j0PXjdLZCC9QPgTmYK6GZAROheDPwU9OZACsITQpKH8tyxN4YbsF6V4QTHciDJxRruu0eks5gujLJyCHKlceMfXFb0aa2240KsZCWHGpY7cZCQKPQHAEIykjnqFtT4cvTvuue5LJcL8IJtEZD'
+                        }
+
+                        response = requests.post(url, headers=headers, data=payload)
+                        print(f"Response for {number}: {response.status_code}, {response.text}")
+                        responses.append({
+                            "number": number,
+                            "status_code": response.status_code,
+                            "response": response.json() if response.status_code == 200 else response.text
+                        })
+
+                        if response.status_code != 200:
+                            print(f"Failed to send message to {number}: {response.status_code}")
+
+                    # Log or return all responses after the loop completes
+                    print("All responses:", responses)
+                    return JsonResponse({"responses": responses}, safe=False)
+
+                except Exception as e:
+                    print(f"Error occurred: {e}")
+                    return JsonResponse({'error': str(e)})
 
 
-            elif instance.frequency == "once" and instance.follow_up == "whatsapp":
-                print("sending once via  whastapp")
-            elif instance.frequency == "periodic" and instance.follow_up == "whatsapp":
-                print("sending periodically via  whatsapp ")
 
-            elif instance.frequency == "once" and instance.follow_up == "both":
-                print("sending once via both by calling send mail and whastapp")
-            elif instance.frequency == "periodic" and instance.follow_up == "both":
-                print("sending periodically via both by calling celery and writting send mail")
+            # email_body = f'''<p>instance.template.template_heading</p>'''
+            if instance.frequency == "once" and instance.follow_up == "mail" and instance.users.exists():
+                print("once, mail, instance.users")
+                mail_field()
 
+            elif instance.frequency == "periodically" and instance.follow_up == "mail" and instance.users.exists():
+                # mail_field()
+                print("periodically, mail, instance.users")
+
+
+            elif instance.frequency == "once" and instance.follow_up == "mail" and instance.category is not None:
+                print("once, mail, instance.category")
+                mail_category()
+
+            elif instance.frequency == "periodically" and instance.follow_up == "mail" and instance.category is not None:
+                print("periodically, mail, instance.category")
+                # mail_category()
+
+
+            elif instance.frequency == "once" and instance.follow_up == "whatsapp" and instance.users.exists():
+                print("once, whatsapp, instance.users")
+                whatsapp_user_num_list()
+
+            elif instance.frequency == "periodically" and instance.follow_up == "whatsapp" and instance.users.exists():
+                print("periodically, whatsapp, instance.users")
+                # whatsapp_user_num_list()
+
+
+            elif instance.frequency == "once" and instance.follow_up == "whatsapp" and instance.category is not None:
+                print("once, whatsapp, instance.category")
+                whatsapp_category_num_list()
+
+            elif instance.frequency == "periodically" and instance.follow_up == "whatsapp" and instance.category is not None:
+                print("periodically, whatsapp, instance.category")
+                # whatsapp_category_num_list()
+
+
+            elif instance.frequency == "once" and instance.follow_up == "both" and instance.users.exists():
+                pass
+
+            elif instance.frequency == "periodically" and instance.follow_up == "both" and instance.users.exists():
+                pass
+
+            elif instance.frequency == "once" and instance.follow_up == "both" and instance.category is not None:
+                pass
+
+            elif instance.frequency == "periodically" and instance.follow_up == "both" and instance.category is not None:
+                pass
 
             else:
-                print("not once not periodic ")
+                print("something else ")
 
         else:
             print("executing -sent status is False")

@@ -6,7 +6,7 @@ from django.http import HttpResponse, JsonResponse
 import random
 from django.db.models import Q
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
+import requests
 from . import models
 from .models import *
 import ast
@@ -502,33 +502,80 @@ def create_broadcast(request):
     # if request.user.is_authenticated:
     data = request.data
     print("data", data)
-    try:
-        # Fetch the existing broadcasts based on the provided parameters
-        Broadcast_exists = Broadcast.objects.filter(
-            template=data.get("template_id"),
-            users__in=data.get("users"),
-            # users__user_id__username__in=["neerajpynam_hct@gmail.com","neerajpynam3@gmail.com"],
-            frequency=data.get("frequency"),
-            follow_up=data.get("follow_up")
-        )
-        print("Broadcast_exists", Broadcast_exists)
 
-        if Broadcast_exists.exists():
-            # If there are any existing broadcasts, return a response indicating this
-            return JsonResponse({"status": "Broadcast_exists"})
+    try:
+        template_id=data.get("template_id")
+        frequency=data.get("frequency")
+        follow_up=data.get("follow_up")
+        users=data.get("users")
+        category=data.get("category")
+        # Fetch the existing broadcasts based on the provided parameters
+        # Broadcast_exists = Broadcast.objects.filter(
+        #     template=data.get("template_id"),
+        #     users__in=data.get("users"),
+        #     # users__user_id__username__in=["neerajpynam_hct@gmail.com","neerajpynam3@gmail.com"],
+        #     frequency=data.get("frequency"),
+        #     follow_up=data.get("follow_up")
+        # )
+        # print("Broadcast_exists", Broadcast_exists)
+        #
+        # if Broadcast_exists.exists():
+        #     # If there are any existing broadcasts, return a response indicating this
+        #     return JsonResponse({"status": "Broadcast_exists"})
+        broadcast_users_exist = Broadcast.objects.filter(
+            template=template_id,
+            frequency=frequency,
+            follow_up=follow_up,
+            users__in=users
+        ).distinct()
+
+        # Query for records based on category
+        broadcast_category_exist = Broadcast.objects.filter(
+            template=template_id,
+            frequency=frequency,
+            follow_up=follow_up,
+            category=category
+        ).distinct()
+
+        # Determine response based on query results
+        if broadcast_users_exist.exists() and category is None:
+            return JsonResponse({
+                "status": "exists",
+                "message": "A record exists for the given users list.",
+                "record": broadcast_users_exist.first()
+            })
+        elif broadcast_category_exist.exists() and not users:
+            return JsonResponse({
+                "status": "exists",
+                "message": "A record exists for the given category.",
+                "record": broadcast_category_exist.first()
+            })
+        elif broadcast_users_exist.exists() and broadcast_category_exist.exists():
+            return JsonResponse({
+                "status": "exists",
+                "message": "Records exist for both users list and category.",
+                "records": {
+                    "users": broadcast_users_exist.first(),
+                    "category": broadcast_category_exist.first()
+                }
+            })
+
         else:
             print("try else")
             # template_namee = request.data.get('template_name')
             template = Template.objects.get(id=request.data.get('template_id'))
             # print(template.id)
+            # category=Category.objects.get(id=request.data.get('category'))
             # # If no existing broadcasts, create a new one
             new_broadcast = Broadcast.objects.create(
                 template=template,
                 frequency=request.data.get('frequency'),
                 follow_up=request.data.get('follow_up'),
-                time=request.data.get('time')
+                time=request.data.get('time'),
+                # category= category
             )
             new_broadcast.users.set(request.data.get('users'))  # Assuming 'users' is a ManyToMany field
+            new_broadcast.category.set(request.data.get('categories'))  # Assuming 'users' is a ManyToMany field
             new_broadcast.save()
             return JsonResponse({"status": "Broadcast_added_successfully"})
 
@@ -539,43 +586,84 @@ def create_broadcast(request):
     #     return JsonResponse({"status": "unauthorized_user"})
 
 
-@api_view(['PUT'])
+# @api_view(['PUT'])
+# #
+# def update_broadcast(request):
+#     # authentication_classes = [JWTAuthentication]
+#     # permission_classes = [IsAuthenticated]
+#     # if request.user.is_authenticated:
+#     data = request.data
+#     print("data", data)
+#     try:
+#         # Fetch the existing broadcasts based on the provided parameters
+#         Broadcast_exists = Broadcast.objects.filter(
+#             template=data.get("template_id"))
+#         print("Broadcast_exists", Broadcast_exists)
 #
+#         if Broadcast_exists.exists():
+#             template = Template.objects.get(id=request.data.get('new_template_id'))
+#             # category = Category.objects.get(id=request.data.get('category'))
+#             for broadcast in Broadcast_exists:
+#                 broadcast.users.set(request.data.get('users'))  # Assuming 'users' is a ManyToMany field
+#                 broadcast.template = template
+#                 broadcast.frequency = data.get('frequency')
+#                 broadcast.follow_up = data.get('follow_up')
+#                 broadcast.category.set(request.data.get('categories'))
+#                 broadcast.time = data.get('time')
+#             #
+#             broadcast.save()
+#
+#             # If there are any existing broadcasts, return a response indicating this
+#             return JsonResponse({"status": "Broadcast_updated"})
+#         else:
+#
+#             return JsonResponse({"status": "No_Broadcast_exists"})
+#
+#     except Exception as e:
+#         # Handle unexpected errors
+#         return JsonResponse({"status": "Error", "message": str(e)})
+#     # else:
+#     #     return JsonResponse({"status": "unauthorized_user"})
+@api_view(['PUT'])
 def update_broadcast(request):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
-    # if request.user.is_authenticated:
     data = request.data
     print("data", data)
     try:
         # Fetch the existing broadcasts based on the provided parameters
-        Broadcast_exists = Broadcast.objects.filter(
-            template=data.get("template_id"))
+        Broadcast_exists = Broadcast.objects.filter(template=data.get("template_id"))
         print("Broadcast_exists", Broadcast_exists)
 
         if Broadcast_exists.exists():
             template = Template.objects.get(id=request.data.get('new_template_id'))
 
+            # Iterate through the broadcasts and update them
             for broadcast in Broadcast_exists:
-                broadcast.users.set(request.data.get('users'))  # Assuming 'users' is a ManyToMany field
-                broadcast.template = template
-                broadcast.frequency = data.get('frequency')
-                broadcast.follow_up = data.get('follow_up')
-                broadcast.time = data.get('time')
-            #
-            broadcast.save()
+                users = request.data.get('users', [])
+                categories = request.data.get('categories', [])
 
-            # If there are any existing broadcasts, return a response indicating this
+                if users:
+                    broadcast.users.set(users)  # Assuming 'users' is a ManyToMany field
+
+                broadcast.template = template
+                broadcast.frequency = data.get('frequency', broadcast.frequency)
+                broadcast.follow_up = data.get('follow_up', broadcast.follow_up)
+
+                if categories:
+                    broadcast.category.set(categories)  # Assuming 'categories' is a ManyToMany field
+
+                if 'time' in data:
+                    broadcast.time = data.get('time', broadcast.time)
+
+                broadcast.save()
+                print('broadcast',broadcast.category)
+
             return JsonResponse({"status": "Broadcast_updated"})
         else:
-
             return JsonResponse({"status": "No_Broadcast_exists"})
 
     except Exception as e:
         # Handle unexpected errors
         return JsonResponse({"status": "Error", "message": str(e)})
-    # else:
-    #     return JsonResponse({"status": "unauthorized_user"})
 
 
 @api_view(['DELETE'])
@@ -626,7 +714,7 @@ def hct_template_dd(request):
 
 
 @api_view(['GET'])
-def Broadcast_pagination(request):
+def broadcast_pagination(request):
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [IsAuthenticated]
     # if request.user.is_authenticated:
@@ -647,6 +735,7 @@ def Broadcast_pagination(request):
 
         # Fetch only the records for the current page
         broadcast_list = Broadcast.objects.all().order_by('-id')[start_index:end_index]
+        print('broadcast_list',broadcast_list)
 
         # Check if there are no records for the given page
         if not broadcast_list:
@@ -717,3 +806,43 @@ def hct_category_dd(request):
                              categories_serializer_data]
 
         return JsonResponse({"category_list": categories_list})
+
+
+
+
+@api_view(['POST'])
+def send_message_template(request):
+    print("enter")
+    try:
+
+        url = "https://graph.facebook.com/v21.0/422738437582013/messages"
+
+        payload = json.dumps({
+            "messaging_product": "whatsapp",
+            "to": "916304882347",
+            "type": "template",
+            "template": {
+                "name": "hello_world",
+                "language": {
+                    "code": "en_US"
+                }
+            }
+        })
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer EAAMY4TVLDQ4BOyx2L1jGZB7AQWkTes3FHMYHwAjTIkP6LC0RGmaLuhVbyS15xBQ0Hf3Ve564kB0PFe8ZA5ly007AW7eeipXhTKKl1gbUZAfzsx2Wi99Hyg6TfErSafHOv0bMEhK4lcGp0QRj9tdJGbfoNtLUhTCG6kOAnr0XMbSUnb4gOEWJfb4Fx9DiqrgLXWjbZBEyimMO7pUg2UxBH6rBMxwZD'
+        }
+
+        response = requests.request("POST", url, headers=headers, data=payload)
+
+        print(response.text)
+
+        if response.status_code == 200:
+            # Parse JSON response
+            response_data = response.json()
+            return JsonResponse(response_data)
+        else:
+            # If the request was not successful, return an error message
+            return JsonResponse({'error': 'Failed to send data to external API'}, status=response.status_code)
+    except Exception as e:
+        return JsonResponse({'error exception': e})

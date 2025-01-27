@@ -162,6 +162,7 @@ class Broadcast_Serializer(serializers.ModelSerializer):
 
     template_id = serializers.CharField(source='template.id', read_only=True)
     users = serializers.SerializerMethodField()
+    category = serializers.SerializerMethodField()
     frequency = serializers.CharField()
     follow_up = serializers.CharField()
     time = serializers.TimeField()
@@ -169,11 +170,15 @@ class Broadcast_Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = Broadcast
-        fields = ['id', 'template', 'template_id', 'users', 'frequency', 'follow_up', 'time', 'sent_status']
+        fields = ['id', 'template', 'template_id', 'users', 'category','frequency', 'follow_up', 'time', 'sent_status']
 
     def get_users(self, obj):
         # return [user.business_email for user in obj.users.all()]
         return [{'user_id': user.id, 'username': user.name} for user in obj.users.all()]
+
+    def get_category(self, obj):
+        # return [user.business_email for user in obj.users.all()]
+        return [{'category_id': cat.id, 'category': cat.category} for cat in obj.category.all()]
 
 
 

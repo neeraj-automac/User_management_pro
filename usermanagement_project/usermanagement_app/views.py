@@ -501,7 +501,8 @@ def create_broadcast(request):
     # permission_classes = [IsAuthenticated]
     # if request.user.is_authenticated:
     data = request.data
-    print("data", data)
+    print("request ............data", data)
+    print("type", type(data))
 
     try:
         template_id=data.get("template_id")
@@ -541,23 +542,23 @@ def create_broadcast(request):
         if broadcast_users_exist.exists() and category is None:
             return JsonResponse({
                 "status": "exists",
-                "message": "A record exists for the given users list.",
-                "record": broadcast_users_exist.first()
+                "message": "A record exists for the given users list."
+                # "record": broadcast_users_exist.first()
             })
         elif broadcast_category_exist.exists() and not users:
             return JsonResponse({
                 "status": "exists",
-                "message": "A record exists for the given category.",
-                "record": broadcast_category_exist.first()
+                "message": "A record exists for the given category."
+                # "record": broadcast_category_exist.first()
             })
         elif broadcast_users_exist.exists() and broadcast_category_exist.exists():
             return JsonResponse({
                 "status": "exists",
-                "message": "Records exist for both users list and category.",
-                "records": {
-                    "users": broadcast_users_exist.first(),
-                    "category": broadcast_category_exist.first()
-                }
+                "message": "Records exist for both users list and category."
+                # "records": {
+                #     "users": broadcast_users_exist.first(),
+                #     "category": broadcast_category_exist.first()
+                # }
             })
 
         else:
@@ -581,7 +582,9 @@ def create_broadcast(request):
 
     except Exception as e:
         # Handle unexpected errors
+        print("in except......")
         return JsonResponse({"status": "Error", "message": str(e)})
+
     # else:
     #     return JsonResponse({"status": "unauthorized_user"})
 
@@ -742,8 +745,8 @@ def broadcast_pagination(request):
             return JsonResponse({"status": "page_not_found"}, status=404)
 
         serializer = Broadcast_Serializer(broadcast_list, many=True)
-        print(serializer)
-        print(serializer.data)
+        # print(serializer)
+        # print(serializer.data)
         # Calculate the total number of pages
         total_broadcasts = Broadcast.objects.count()
         total_pages = (total_broadcasts + page_size - 1) // page_size

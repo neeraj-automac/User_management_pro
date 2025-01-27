@@ -202,7 +202,7 @@ def send_broadcast(sender, instance, created, **kwargs):
                         })
                         headers = {
                             'Content-Type': 'application/json',
-                            'Authorization': 'Bearer EAAMY4TVLDQ4BOZCGQmE23O38pLfZA8Ps9TtRhbhLzaJf8doVO8oTZAKAZARUWbNP3WundiNb1xWY4h6xwgH3AeFbGrixNfXtXpxp0wZApTc7iNZAZA9Ry3ZAm1lv5bDV4LkZBgN32Y2eU17QGOx1j14usIEea6KqKrNNDGNVgtuXcbkWU2NFixgTkRLBFKdm8Pxo214Qkt0BtHRx57THxZBbpcUgqqmZBSp'
+                            'Authorization': 'Bearer EAAMY4TVLDQ4BO3ssWkoDE02RvTuYfCsH6E1khXZCY2h4bfdZCrS6nCnZAZBwEmAZCHdvWCxCAwt9ZBZA8HhaZCyQDgH2zjEPowuZCcOBzher6O31DyiaDFijfigjyBzEoIr8o1ZClBLsTKZACjZCYxndOuGnc8VCO5X11Ci4QFZCB6g8UV0zfVXG43itf2CciVbA6ZA5gZCu5pnc8vmtBf8russDSqsRdxZBnBUZD'
                         }
 
                         response = requests.post(url, headers=headers, data=payload)

@@ -44,7 +44,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://192.168.2.43:3000',
 
     'https://main.d1rxm8efi4ljju.amplifyapp.com',
-    'https://community.healthcoachsaiteja.com/login'
+    'https://community.healthcoachsaiteja.com'
 
 
     ]

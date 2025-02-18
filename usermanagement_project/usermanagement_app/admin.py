@@ -68,7 +68,8 @@ class TemplateAdmin(admin.ModelAdmin):
 
 @admin.register(Broadcast)
 class BroadcastAdmin(admin.ModelAdmin):
-    list_display = ['template','frequency','follow_up','sent_status']
+    # list_display = ['id','template','users','category','frequency','follow_up','sent_status']
+    list_display = ['id','template','frequency','follow_up','sent_status']
 
 
 

@@ -633,7 +633,7 @@ def update_broadcast(request):
     print("data", data)
     try:
         # Fetch the existing broadcasts based on the provided parameters
-        Broadcast_exists = Broadcast.objects.filter(template=data.get("template_id"))
+        Broadcast_exists = Broadcast.objects.filter(id=data.get("broadcast_id"),template=data.get("template_id"))
         print("Broadcast_exists", Broadcast_exists)
 
         if Broadcast_exists.exists():

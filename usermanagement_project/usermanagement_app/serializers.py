@@ -60,12 +60,15 @@ class User_create_Serializer(serializers.ModelSerializer):
     age = serializers.IntegerField()
     gender = serializers.CharField(max_length=10)
     category = serializers.CharField(max_length=30)  # Assuming category is passed as an ID
-    user_status=serializers.CharField(max_length=30)
+    # user_status=serializers.CharField(max_length=30)
+    how_did_you_learn_about_us=serializers.CharField(max_length=500)
+    type_of_challange=serializers.CharField(max_length=500)
+    goal=serializers.CharField()
 
     class Meta:
         model = User
         fields = ['username',  'name', 'contact_no', 'business_email',
-                  'location', 'age', 'gender', 'category','user_status']
+                  'location', 'age', 'gender', 'category','how_did_you_learn_about_us','type_of_challange','goal']#,'user_status'
         # extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -78,7 +81,11 @@ class User_create_Serializer(serializers.ModelSerializer):
             'age': validated_data.pop('age'),
             'gender': validated_data.pop('gender'),
             'category': validated_data.pop('category'),
-            'user_status':validated_data.pop('user_status')
+            # 'user_status':validated_data.pop('user_status')
+            'how_did_you_learn_about_us': validated_data.pop('how_did_you_learn_about_us'),
+                'type_of_challange': validated_data.pop('type_of_challange'),
+            'goal': validated_data.pop('goal')
+
         }
 
         # Create User
@@ -92,6 +99,7 @@ class User_create_Serializer(serializers.ModelSerializer):
             user_id=user,
             role="customer",
             category=category,
+            user_status="active",
 
             **user_details_data
         )

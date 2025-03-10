@@ -4,7 +4,7 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import send_mail
 from django.http import HttpResponse, JsonResponse
 import random
-from django.db.models import Q
+from django.db.models import Q,Count
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import requests
 from . import models
@@ -25,26 +25,45 @@ from django.db.models import Min, Max
 from functools import reduce
 from django.core.paginator import Paginator
 # Create your views here.
+# @api_view(['GET'])
+# def all_users_status(request):
+#     # authentication_classes = [JWTAuthentication]
+#     # permission_classes = [IsAuthenticated]
+#     # if request.user.is_authenticated:
+#     if request.method == 'GET':
+#         gold_category = Category.objects.get(category="gold")  # Get ID for "gold"
+#         silver_category = Category.objects.get(category="silver")
+#         all_users = User_details.objects.filter(Q(category=gold_category) | Q(category=silver_category))
+#         total_user_count = len(all_users)
+#
+#         print('all_users', all_users)
+#         active_users = User_details.objects.filter(category=gold_category).count()
+#         print('active_users', active_users)
+#         inactive_users = User_details.objects.filter(category=silver_category).count()
+#         print('inactive_users', inactive_users)
+#
+#         # print("read the record")
+#             {"status": {"total_users": total_user_count, "gold": active_user
+#
+#         return JsonResponse(s, "silver": inactive_users}})
+#     # else:
+#     #     return JsonResponse({"status": "unauthorized_user"})
+
+
 @api_view(['GET'])
 def all_users_status(request):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
-    # if request.user.is_authenticated:
     if request.method == 'GET':
-        all_users = User_details.objects.filter(Q(user_status="active") | Q(user_status="inactive"))
-        total_user_count = len(all_users)
-        print('all_users', all_users)
-        active_users = User_details.objects.filter(user_status='active').count()
-        print('active_users', active_users)
-        inactive_users = User_details.objects.filter(user_status='inactive').count()
-        print('inactive_users', inactive_users)
+        # Get all categories and their user count
+        category_counts = (
+            User_details.objects.values('category__category')
+            .annotate(count=Count('id'))
+        )
 
-        # print("read the record")
+        total_user_count = sum(item['count'] for item in category_counts)
 
-        return JsonResponse(
-            {"status": {"total_users": total_user_count, "active": active_users, "inactive": inactive_users}})
-    # else:
-    #     return JsonResponse({"status": "unauthorized_user"})
+        category_data = [{"category": item['category__category'], "count": item['count']} for item in category_counts]
+
+        return JsonResponse({"status": {"total_users": total_user_count, "categories": category_data}})
 
 
 # hct
@@ -786,7 +805,9 @@ def register_user(request):
            serializer.save()
            return JsonResponse({"status":"user_registered_successfully"})
        # return JsonResponse({"status":"failed_to_register"})
-       return JsonResponse(serializer.errors)
+       else:
+           # print(serializer.errors)
+           return JsonResponse(serializer.errors)
 
 
 
@@ -849,3 +870,60 @@ def send_message_template(request):
             return JsonResponse({'error': 'Failed to send data to external API'}, status=response.status_code)
     except Exception as e:
         return JsonResponse({'error exception': e})
+
+
+
+# class BulkUserUploadView(APIView):
+#     permission_classes = [permissions.AllowAny]
+#
+#     def post(self, request, *args, **kwargs):
+#         file = request.FILES.get('file')  #  Captures the uploaded file
+#         if not file:
+#             return JsonResponse({"error": "No file uploaded"}, status=400)
+#
+#         try:
+#             wb = openpyxl.load_workbook(file)  #  Reads the file using openpyxl
+#             sheet = wb.active  #  Gets the first sheet
+#
+#             users_created = []
+#             errors = []
+#
+#             for row in sheet.iter_rows(min_row=2, values_only=True):
+#                 username, name, contact_no, business_email, location, age, gender, category_name, user_status = row
+#
+#                 if not all([username, name, contact_no, business_email, location, age, gender, category_name, user_status]):
+#                     errors.append({"row": row, "error": "Missing required fields"})
+#                     continue
+#
+#                 try:
+#                     category = Category.objects.get(category=category_name)
+#                 except Category.DoesNotExist:
+#                     errors.append({"row": row, "error": f"Category '{category_name}' not found"})
+#                     continue
+#
+#                 user_data = {
+#                     "username": username,
+#                     "name": name,
+#                     "contact_no": contact_no,
+#                     "business_email": business_email,
+#                     "location": location,
+#                     "age": age,
+#                     "gender": gender,
+#                     "category": category.id,
+#                     "user_status": user_status
+#                 }
+#
+#                 serializer = User_create_Serializer(data=user_data)
+#                 if serializer.is_valid():
+#                     serializer.save()
+#                     users_created.append(username)
+#                 else:
+#                     errors.append({"row": row, "error": serializer.errors})
+#
+#             return JsonResponse(
+#                 {"message": "User creation completed", "users_created": users_created, "errors": errors},
+#                 status=status.HTTP_201_CREATED
+#             )
+#
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

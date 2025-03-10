@@ -13,6 +13,11 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.http import JsonResponse
 import json
+import openpyxl
+from django.http import JsonResponse
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
 
 from unicodedata import category
 
@@ -29,7 +34,7 @@ class User_details(models.Model):
     ROLE_STATUS_CHOICES = (('admin', 'admin'), ('customer', 'customer'))
     role = models.CharField(max_length=15, choices=ROLE_STATUS_CHOICES)
     name=models.CharField(max_length = 50,blank=False)
-    contact_no = models.BigIntegerField()
+    contact_no = models.BigIntegerField(null=False, blank=False)
     user_status=models.CharField(max_length = 50,blank=True)
     category=models.ForeignKey(Category, on_delete=models.CASCADE)
     # company = models.CharField(max_length = 30,blank=True)#remove?
@@ -39,6 +44,9 @@ class User_details(models.Model):
     location = models.CharField(max_length = 30,blank=False)
     age = models.PositiveIntegerField()
     gender = models.CharField(max_length=150)
+    how_did_you_learn_about_us=  models.CharField(max_length=500,blank=False)
+    type_of_challange=  models.CharField(max_length=500,blank=False)
+    goal=  models.TextField(blank=False)
     # otp = models.CharField(max_length=255, unique=True, blank=True, null=True)
     # course_id=models.IntegerField(null=True, blank=True)
 
@@ -357,3 +365,68 @@ def send_broadcast(sender, instance, created, **kwargs):
 #     else:
 #
 #         print("edited in user reg models.py")
+
+
+
+
+class BulkUserUploadView(APIView):
+    permission_classes = [permissions.AllowAny]  # Adjust based on requirements
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get('file')  # Expecting an Excel file
+        if not file:
+            return JsonResponse({"error": "No file uploaded"}, status=400)
+
+        try:
+            wb = openpyxl.load_workbook(file)
+            sheet = wb.active  # Get the first sheet
+
+            users_created = []
+            errors = []
+
+            # Assuming the Excel file has headers:
+            # ["username", "name", "contact_no", "business_email", "location", "age", "gender", "category", "user_status"]
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                username, name, contact_no, business_email, location, age, gender, category_name, user_status = row
+
+                # Validate required fields
+                if not all([username, name, contact_no, business_email, location, age, gender, category_name, user_status]):
+                    errors.append({"row": row, "error": "Missing required fields"})
+                    continue
+
+                # Validate category existence
+                try:
+                    category = Category.objects.get(category=category_name)  # Adjust field name if necessary
+                except Category.DoesNotExist:
+                    errors.append({"row": row, "error": f"Category '{category_name}' not found"})
+                    continue
+
+                # Prepare user data
+                user_data = {
+                    "username": username,
+                    "name": name,
+                    "contact_no": contact_no,
+                    "business_email": business_email,
+                    "location": location,
+                    "age": age,
+                    "gender": gender,
+                    "category": category.id,  # Use category ID
+                    "user_status": user_status
+                }
+
+                # Validate and save user using the serializer
+                serializer = User_create_Serializer(data=user_data)
+                if serializer.is_valid():
+                    serializer.save()
+                    users_created.append(username)
+                else:
+                    errors.append({"row": row, "error": serializer.errors})
+
+            return JsonResponse(
+                {"message": "User creation completed", "users_created": users_created, "errors": errors},
+                status=status.HTTP_201_CREATED
+            )
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+

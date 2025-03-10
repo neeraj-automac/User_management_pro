@@ -23,6 +23,7 @@ urlpatterns = [
     path('hct_category_dd/', views.hct_category_dd, name='hct_template_dd'),
     path('broadcast_pagination/',views.broadcast_pagination,name='broadcast_pagination'),
     path('send_message_template/',views.send_message_template,name='send_message_template'),
+    path('upload-users/', BulkUserUploadView.as_view(), name='upload-users'),
 
 
 ]

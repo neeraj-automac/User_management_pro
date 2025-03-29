@@ -52,25 +52,40 @@ class user_serializer(serializers.ModelSerializer):
 #         fields = ['username', 'password']
 
 class User_create_Serializer(serializers.ModelSerializer):
+    # Fields for User model
+    username = serializers.CharField(max_length=150)
+
     # Additional fields for User_details
-    name = serializers.CharField(max_length=50)
-    contact_no = serializers.IntegerField()
-    business_email = serializers.EmailField()
-    location = serializers.CharField(max_length=30)
-    age = serializers.IntegerField()
-    gender = serializers.CharField(max_length=10)
-    category = serializers.CharField(max_length=30)  # Assuming category is passed as an ID
-    # user_status=serializers.CharField(max_length=30)
-    how_did_you_learn_about_us=serializers.CharField(max_length=500)
-    type_of_challange=serializers.CharField(max_length=500)
-    goal=serializers.CharField()
+    name = serializers.CharField(max_length=50, allow_blank=True)
+    contact_no = serializers.IntegerField(allow_null=True)
+    business_email = serializers.EmailField(allow_blank=True)
+    location = serializers.CharField(max_length=30, allow_blank=True)
+    age = serializers.IntegerField(allow_null=True)
+    gender = serializers.CharField(max_length=150, allow_blank=True)
+    category = serializers.CharField(max_length=30)  # Assuming category is passed as a string (e.g., category name or ID)
+    how_did_you_learn_about_us = serializers.CharField(max_length=500, allow_blank=True)
+    type_of_challange = serializers.CharField(max_length=500, allow_blank=True)
+    goal = serializers.CharField(allow_blank=True)
+    date_of_joining = serializers.DateField(allow_null=True, default=None)
+    height = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True, default=None)
+    weight = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True, default=None)
+    body_type = serializers.CharField(max_length=50, allow_blank=True, allow_null=True)
+    blood_test = serializers.CharField(max_length=100, allow_blank=True, allow_null=True)
+    bone_density = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True, default=None)
+    body_fatpercentage = serializers.DecimalField(max_digits=4, decimal_places=1, allow_null=True, default=None)
+    muscle_mass = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True, default=None)
+    any_physical_limitations = serializers.CharField(allow_blank=True, allow_null=True)
+    any_concerns = serializers.CharField(allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
-        fields = ['username',  'name', 'contact_no', 'business_email',
-                  'location', 'age', 'gender', 'category','how_did_you_learn_about_us','type_of_challange','goal']#,'user_status'
-        # extra_kwargs = {'password': {'write_only': True}}
-
+        fields = [
+            'username',  # User model field
+            'name', 'contact_no', 'business_email', 'location', 'age', 'gender', 'category',
+            'how_did_you_learn_about_us', 'type_of_challange', 'goal', 'date_of_joining',
+            'height', 'weight', 'body_type', 'blood_test', 'bone_density', 'body_fatpercentage',
+            'muscle_mass', 'any_physical_limitations', 'any_concerns'
+        ]
     def create(self, validated_data):
         # Pop fields for User_details
         user_details_data = {
@@ -81,30 +96,37 @@ class User_create_Serializer(serializers.ModelSerializer):
             'age': validated_data.pop('age'),
             'gender': validated_data.pop('gender'),
             'category': validated_data.pop('category'),
-            # 'user_status':validated_data.pop('user_status')
             'how_did_you_learn_about_us': validated_data.pop('how_did_you_learn_about_us'),
-                'type_of_challange': validated_data.pop('type_of_challange'),
-            'goal': validated_data.pop('goal')
-
+            'type_of_challange': validated_data.pop('type_of_challange'),
+            'goal': validated_data.pop('goal'),
+            'date_of_joining': validated_data.pop('date_of_joining'),
+            'height': validated_data.pop('height'),
+            'weight': validated_data.pop('weight'),
+            'body_type': validated_data.pop('body_type'),
+            'blood_test': validated_data.pop('blood_test'),
+            'bone_density': validated_data.pop('bone_density'),
+            'body_fatpercentage': validated_data.pop('body_fatpercentage'),
+            'muscle_mass': validated_data.pop('muscle_mass'),
+            'any_physical_limitations': validated_data.pop('any_physical_limitations'),
+            'any_concerns': validated_data.pop('any_concerns'),
         }
 
         # Create User
-        user = User.objects.create_user(username=validated_data['username'], password="user@123")
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password="user@123"  # Consider making password configurable via the serializer
+        )
 
         # Create User_details
-        category = Category.objects.get(category=user_details_data.pop('category'))
-        print("category____",category)
-
+        category = Category.objects.get(category=user_details_data.pop('category'))  # Assuming 'category' is a field in Category model
         User_details.objects.create(
             user_id=user,
             role="customer",
             category=category,
             user_status="active",
-
             **user_details_data
         )
         return user
-
 
 class User_doj_Serializer(serializers.ModelSerializer):
     class Meta:
@@ -133,7 +155,23 @@ class UserDetails_pagination_Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = User_details
-        fields = ['date_joined', 'name', 'contact_no', 'user_status', 'business_email', 'location','category','age','gender','username']
+        fields = ['date_joined', 'name', 'contact_no', 'user_status', 'business_email', 'location','category','age','gender','username','how_did_you_learn_about_us',
+'type_of_challange',
+'goal',
+'date_of_joining',
+'height',
+'weight',
+'body_type',
+'blood_test',
+'bone_density',
+'body_fatpercentage',
+'muscle_mass',
+'any_physical_limitations',
+'any_concerns',
+'Total_attendance',
+'Total_water_intake',
+'Total_step_count',
+'Total_workout_duration']
 
 
 class UserDetails_business_email_Serializer(serializers.ModelSerializer):
@@ -194,3 +232,84 @@ class category_Serializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id','category']
+
+
+class challange_Serializer(serializers.ModelSerializer):
+    category = serializers.CharField(source='category.category', read_only=True)
+    category_id = serializers.CharField(source='category.id', read_only=True)
+    user_id = serializers.CharField(source='user_id.id', read_only=True)
+    # date_joined = serializers.DateTimeField(source='user_id.date_joined', read_only=True)
+
+    class Meta:
+        model = User_details
+        fields = [
+            'user_id',
+            'name',
+            'category',
+            'category_id',
+            'date_of_joining',
+            'height',
+            'weight',
+            'body_type',
+            'Total_attendance',
+            'Total_water_intake',
+            'Total_step_count',
+            'Total_workout_duration',
+            'goal'
+        ]
+
+
+
+class User_onboard_CreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User_details
+        fields = [
+            'user_id',
+            'name',
+            'date_of_joining',
+            'Total_attendance',
+            'Total_water_intake',
+            'Total_step_count',
+            'Total_workout_duration',
+            'goal'
+        ]
+
+
+class UserTrackingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User_tracking
+        fields = '__all__'
+
+
+class UserDetailsSerializer(serializers.ModelSerializer):
+    # Use CharField for category if you're passing the category name
+    category = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = User_details
+        fields = [
+            'name', 'contact_no', 'business_email', 'location', 'age', 'gender',
+            'category', 'how_did_you_learn_about_us', 'type_of_challange', 'goal',
+            'date_of_joining', 'height', 'weight', 'body_type', 'blood_test',
+            'bone_density', 'body_fatpercentage', 'muscle_mass',
+            'any_physical_limitations', 'any_concerns', 'role', 'user_status',
+            'Total_attendance', 'Total_water_intake', 'Total_step_count',
+            'Total_workout_duration'
+        ]
+        read_only_fields = ['user_id']  # Prevent updating the user_id field
+
+    def update(self, instance, validated_data):
+        # Handle category separately if provided
+        category_data = validated_data.pop('category', None)
+        if category_data:
+            try:
+                instance.category = Category.objects.get(category=category_data)
+            except Category.DoesNotExist:
+                raise serializers.ValidationError({"category": f"Category '{category_data}' does not exist."})
+
+        # Update the remaining fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+        return instance

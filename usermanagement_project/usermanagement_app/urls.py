@@ -23,7 +23,15 @@ urlpatterns = [
     path('hct_category_dd/', views.hct_category_dd, name='hct_template_dd'),
     path('broadcast_pagination/',views.broadcast_pagination,name='broadcast_pagination'),
     path('send_message_template/',views.send_message_template,name='send_message_template'),
-    path('upload-users/', BulkUserUploadView.as_view(), name='upload-users'),
+    path('challenge_pagination/',views.challenge_pagination,name='challenge_pagination'),
+    # path('user_onboard/', views.user_onboard, name='user_onboard'),
+    path('delete_onboard_user/', views.delete_onboard_user, name='user_onboard'),
+    path('user_challenge_records/', views.user_challenge_records_pagination, name='user_challenge_records_pagination'),
+    path('user_challenge_create_records/', views.user_challenge_create_records, name='user_challenge_create_records'),
+    path('update_user_tracking/', views.update_user_tracking, name='update_user_tracking'),
+    path('delete_user_activity_record/', views.delete_user_activity_record, name='delete_user_activity_record'),
+
+    # path('upload-users/', BulkUserUploadView.as_view(), name='upload-users'),
 
 
 ]

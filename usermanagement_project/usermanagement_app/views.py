@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from django.http import HttpResponse, JsonResponse
 import random
 from django.db.models import Q,Count
+from rest_framework import generics
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import requests
 from . import models
@@ -67,7 +68,7 @@ def all_users_status(request):
 
 
 # hct
-@api_view(['POST', "DELETE"])
+@api_view(["DELETE"])
 def delete_users(request):
     # authentication_classes = [JWTAuthentication]
     # permission_classes = [IsAuthenticated]
@@ -247,84 +248,27 @@ def update_user_status(request):
 
 
 # hct
-@api_view(['GET', 'PUT'])
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])  # Optional: restrict to authenticated users
 def edit_user_details_hct(request):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
-    # if request.user.is_authenticated:
-    # category_id=Category.objects.filter(id=request.data.get("category"))
-    # print("category_id",category_id)
+    try:
+        # Get the User instance by username
+        business_email=request.data.get("business_email")
+
+        # Get the associated User_details instance
+        user_details = User_details.objects.get(business_email=business_email)
+
+    except User_details.DoesNotExist:
+        return JsonResponse({"status": "failed", "error": "User details not found."}, status=200)
+
     if request.method == 'PUT':
+        serializer = UserDetailsSerializer(user_details, data=request.data, partial=True)  # partial=True allows partial updates
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse({"status": "user_details_updated_successfully"}, status=200)
+        return JsonResponse({"status": "failed", "errors": serializer.errors}, status=200)
 
-        ds = request.data  # expects a dictionary with user details as per the user_details model
-
-        user_id = request.data.get("business_email")
-
-        try:
-            rec = User_details.objects.get(business_email=user_id)  # ds["user_id"]
-            print(rec)
-
-            rec_list = json.loads(serializers.serialize('json', [rec, ]))
-
-            for item in ds and rec_list[0]["fields"]:
-
-                if item == "name" and ds[item] != "":
-
-                    rec.name = ds[item]
-                else:
-                    rec.name = rec.name
-                if item == "contact_no" and ds[item] != "":
-                    rec.contact_no = ds[item]
-                else:
-                    rec.contact_no = rec.contact_no
-
-                if item == "business_email" and ds[item] != "":
-                    rec.business_email = ds[item]
-                else:
-                    rec.business_email = rec.business_email
-
-                if item == "location" and ds[item] != "":
-                    rec.location = ds[item]
-                else:
-                    rec.location = rec.location
-
-                if item == "user_status" and ds[item] != "":
-                    rec.user_status = ds[item]
-                else:
-                    rec.user_status = rec.user_status
-
-                if item == "age" and ds[item] != "":
-                    rec.age = ds[item]
-                else:
-                    rec.age = rec.age
-
-                if item == "gender" and ds[item] != "":
-                    rec.gender = ds[item]
-                else:
-                    rec.gender = rec.gender
-
-                if item == "category" and ds[item] != "":
-                    try:
-                        category_id = Category.objects.get(category=ds[item])
-                        rec.category = category_id
-                    except Category.DoesNotExist:
-                        return JsonResponse({"status": "category_not_found"})
-                else:
-                    rec.category = rec.category
-
-                rec.save()
-                # print("item found -->", item)
-            de = User_details.objects.filter(business_email=user_id)  # ds["user_id"]
-            de_s = user_details_serializer(de, many=True)
-            # print("d_s", de_s.data)
-            return Response({"user_details": de_s.data})
-        except User_details.DoesNotExist:
-            return JsonResponse({"status": "user_does_not_exist"})
-    else:
-        return JsonResponse({"status": "not put request"})
-
-    # else:
-    #     return JsonResponse({"status": "unauthorized_user"})
+    return JsonResponse({"status": "failed", "error": "Only PUT requests are allowed."}, status=200)
 
 
 # hct
@@ -478,9 +422,9 @@ def Templates_pagination(request):
         try:
             page = int(page)
             if page < 1:
-                return JsonResponse({"status": "invalid_page_number"}, status=400)
+                return JsonResponse({"status": "invalid_page_number"}, status=200)
         except ValueError:
-            return JsonResponse({"status": "invalid_page_number"}, status=400)
+            return JsonResponse({"status": "invalid_page_number"}, status=200)
 
         start_index = (page - 1) * page_size
         end_index = page * page_size
@@ -490,7 +434,7 @@ def Templates_pagination(request):
 
         # Check if there are no records for the given page
         if not template_list:
-            return JsonResponse({"status": "page_not_found"}, status=404)
+            return JsonResponse({"status": "page_not_found"}, status=200)
 
         serializer = TemplateDetails_pagination_Serializer(template_list, many=True)
 
@@ -748,9 +692,9 @@ def broadcast_pagination(request):
         try:
             page = int(page)
             if page < 1:
-                return JsonResponse({"status": "invalid_page_number"}, status=400)
+                return JsonResponse({"status": "invalid_page_number"}, status=200)
         except ValueError:
-            return JsonResponse({"status": "invalid_page_number"}, status=400)
+            return JsonResponse({"status": "invalid_page_number"}, status=200)
 
         start_index = (page - 1) * page_size
         end_index = page * page_size
@@ -761,7 +705,7 @@ def broadcast_pagination(request):
 
         # Check if there are no records for the given page
         if not broadcast_list:
-            return JsonResponse({"status": "page_not_found"}, status=404)
+            return JsonResponse({"status": "page_not_found"}, status=200)
 
         serializer = Broadcast_Serializer(broadcast_list, many=True)
         # print(serializer)
@@ -792,22 +736,42 @@ def broadcast_pagination(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_user(request):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
-    # authentication_classes = []  # No authentication required
-    # permission_classes = [AllowAny]
-    # print("****", request.data)
     if request.method == 'POST':
+        # Extract username and business_email from the request data
+        username = request.data.get('username')
+        business_email = request.data.get('business_email')
 
-       # serializer = User_Registration_Serializer(data=request.data)
-       serializer = User_create_Serializer(data=request.data)
-       if serializer.is_valid():
-           serializer.save()
-           return JsonResponse({"status":"user_registered_successfully"})
-       # return JsonResponse({"status":"failed_to_register"})
-       else:
-           # print(serializer.errors)
-           return JsonResponse(serializer.errors)
+        # Check if username or business_email is missing
+        if not username or not business_email:
+            return JsonResponse(
+                {"status": "failed", "error": "Both username and business_email are required."},
+                status=200
+            )
+
+        # Check if a user with this username already exists
+        if User.objects.filter(username=username).exists():
+            return JsonResponse(
+                {"status": "failed", "error": f"Username '{username}' is already taken."},
+                status=200
+            )
+
+        # Check if a user with this business_email already exists in User_details
+        if User_details.objects.filter(business_email=business_email).exists():
+            return JsonResponse(
+                {"status": "failed", "error": f"Email '{business_email}' is already registered."},
+                status=200
+            )
+
+        # If both username and business_email are unique, proceed with serialization and creation
+        serializer = User_create_Serializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse({"status": "user_registered_successfully"}, status=201)
+        else:
+            return JsonResponse({"status": "failed", "errors": serializer.errors}, status=200)
+
+    # Handle non-POST requests (optional)
+    return JsonResponse({"status": "failed", "error": "Only POST requests are allowed."}, status=200)
 
 
 
@@ -927,3 +891,295 @@ def send_message_template(request):
 #
 #         except Exception as e:
 #             return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+#https://hct.automactechnologies.in/
+@api_view(['GET'])
+def challenge_pagination(request):
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
+    # if request.user.is_authenticated:
+
+    if request.method == "GET":
+        page = request.query_params.get("page", 1)
+        page_size = 10  # Change this to the number of records you want per page
+
+        try:
+            page = int(page)
+            if page < 1:
+                return JsonResponse({"status": "invalid_page_number"}, status=200)
+        except ValueError:
+            return JsonResponse({"status": "invalid_page_number"}, status=200)
+
+        start_index = (page - 1) * page_size
+        end_index = page * page_size
+
+        # Fetch only the records for the current page
+        broadcast_list = User_details.objects.filter(category__category="100days_challenge").order_by('-id')[start_index:end_index]
+        print('broadcast_list',broadcast_list)
+
+        # Check if there are no records for the given page
+        if not broadcast_list:
+            return JsonResponse({"status": "page_not_found"}, status=200)
+
+        serializer = challange_Serializer(broadcast_list, many=True)
+        # print(serializer)
+        # print(serializer.data)
+        # Calculate the total number of pages
+        total_broadcasts = User_details.objects.count()
+        total_pages = (total_broadcasts + page_size - 1) // page_size
+
+        response = {
+            "number_of_pages": total_pages,
+            "current_page": page,
+            "next_page": page + 1 if end_index < total_broadcasts else None,
+            "previous_page": page - 1 if start_index > 0 else None,
+            "challenge_records": serializer.data
+        }
+
+        return JsonResponse(response, status=200)
+    else:
+        return JsonResponse({"status": "method_not_allowed"}, status=405)
+    # else:
+    #     return JsonResponse({"status": "unauthorized_user"})
+
+#
+# @api_view(['PATCH'])
+# def user_onboard(request):
+#     if request.method == 'PATCH':
+#         # Extract user_id from request data
+#         user_id = request.data.get('user_id')
+#
+#         # Validate user_id presence
+#         if not user_id:
+#             return JsonResponse({"error": "user_id_is_required"}, status=400)
+#
+#         try:
+#             # Fetch the existing User_details instance
+#             user_details = User_details.objects.get(user_id=user_id)
+#             print('user_details',user_details)
+#         except User_details.DoesNotExist:
+#             return JsonResponse({"error": "User_details_not_found"}, status=404)
+#         except User_details.MultipleObjectsReturned:
+#             return JsonResponse({"error": "Multiple_user_details_found_for_this_user_id"}, status=400)
+#
+#         # Use serializer for partial update
+#         serializer = User_onboard_CreateSerializer(user_details, data=request.data, partial=True)
+#
+#         if serializer.is_valid():
+#             serializer.save()
+#             return JsonResponse({"status": "user_onboarded_successfully"}, status=200)
+#         else:
+#             return JsonResponse({"error": serializer.errors}, status=400)
+#     return JsonResponse({"error": "Method_not_allowed"}, status=405)
+
+@api_view(['DELETE'])
+def delete_onboard_user(request):
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
+    # if request.user.is_authenticated:
+
+    try:
+
+        all_rec = User_tracking.objects.filter(user_id=request.query_params.get('user_id'))
+        if all_rec.exists():
+            all_rec.delete()
+            return JsonResponse({"status": "user_records_deleted"})
+        else:
+            return JsonResponse({"status": "No_records_found"})
+    except  all_rec.DoesNotExist:
+        return JsonResponse({"status": "records_does_not_exist"})
+
+
+    finally:
+        print("execution_completed")
+    # else:
+    #     return JsonResponse({"status": "unauthorized_user"})
+
+
+@api_view(['GET'])
+def user_challenge_records_pagination(request):
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
+    # if request.user.is_authenticated:
+
+    if request.method == "GET":
+        page = request.query_params.get("page", 1)
+        page_size = 10  # Change this to the number of records you want per page
+
+        try:
+            page = int(page)
+            if page < 1:
+                return JsonResponse({"status": "invalid_page_number"}, status=200)
+        except ValueError:
+            return JsonResponse({"status": "invalid_page_number"}, status=200)
+
+        start_index = (page - 1) * page_size
+        end_index = page * page_size
+
+        # Fetch only the records for the current page
+        broadcast_list = User_tracking.objects.filter(user_id=request.query_params.get("user_id")).order_by('-id')[start_index:end_index]
+        print('broadcast_list',broadcast_list)
+
+        # Check if there are no records for the given page
+        if not broadcast_list:
+            return JsonResponse({"status": "page_not_found"}, status=200)
+
+        serializer = UserTrackingSerializer(broadcast_list, many=True)
+        # print(serializer)
+        # print(serializer.data)
+        # Calculate the total number of pages
+        total_broadcasts = User_tracking.objects.count()
+        total_pages = (total_broadcasts + page_size - 1) // page_size
+
+        response = {
+            "number_of_pages": total_pages,
+            "current_page": page,
+            "next_page": page + 1 if end_index < total_broadcasts else None,
+            "previous_page": page - 1 if start_index > 0 else None,
+            "user_daily_activity_records": serializer.data
+        }
+
+        return JsonResponse(response, status=200)
+    else:
+        return JsonResponse({"status": "method_not_allowed"}, status=405)
+    # else:
+    #     return JsonResponse({"status": "unauthorized_user"})
+
+
+@api_view(['POST'])
+def user_challenge_create_records(request):
+    try:
+        # Extract user_id and date_of_activity from request data
+        user_id = request.data.get('user_id')
+        date_of_activity = request.data.get('date_of_activity')
+
+        # Validate user_id and date_of_activity
+        if not user_id or not date_of_activity:
+            return Response(
+                {"status": "user_id_and_date_of_activity_required"},
+                status=status.HTTP_200_OK
+            )
+
+        # Convert user_id to User instance if necessary (assuming user_id is an ID)
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"status": "user_not_found"},
+                status=status.HTTP_200_OK
+            )
+
+        # Parse date_of_activity to ensure it's in the correct format
+        try:
+            parsed_date = datetime.strptime(date_of_activity, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {"status": "invalid_date_format_use_YYYY-MM-DD"},
+                status=status.HTTP_200_OK
+            )
+
+        # Check if a record exists for the given user_id and date_of_activity
+        existing_record = User_tracking.objects.filter(
+            user_id=user,
+            date_of_activity=parsed_date
+        ).exists()
+
+        if existing_record:
+            return Response(
+                {"status": "record_already_exists_for_this_user_and_date"},
+                status=status.HTTP_200_OK
+            )
+
+        # Use serializer for validation and creation
+        serializer = UserTrackingSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(
+                {"status": "user_tracking_created"},
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            return JsonResponse(
+                {"status": "invalid_data", "errors": serializer.errors},
+                status=status.HTTP_200_OK
+            )
+
+    except Exception as e:
+        return JsonResponse(
+            {"status": f"error: {str(e)}"},
+            status=status.HTTP_200_OK
+        )
+
+
+@api_view(['PUT'])
+def update_user_tracking(request):
+    try:
+        # Extract user_id and date_of_activity to identify the record
+        user_id = request.data.get('user_id')
+        print(user_id,type(user_id))
+        date_of_activity = request.data.get('date_of_activity')
+
+        # Check if a record exists for the given user_id and date_of_activity
+        if not (user_id and date_of_activity):
+            return JsonResponse(
+                {"status": "user_id_and_date_of_activity_are_required"},
+                status=status.HTTP_200_OK
+            )
+
+        # Fetch the existing record
+        user_tracking = User_tracking.objects.filter(
+            user_id=user_id,
+            date_of_activity=date_of_activity
+        ).first()
+
+        if not user_tracking:
+            return JsonResponse(
+                {"status": "Record_does_not_exist"},
+                status=status.HTTP_200_OK
+            )
+
+        # Use serializer to update the record
+        serializer = UserTrackingSerializer(user_tracking, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(
+                {"status": "User_tracking_updated"},
+                status=status.HTTP_200_OK
+            )
+        else:
+            return JsonResponse(
+                {"status": "Invalid_data", "errors": serializer.errors},
+                status=status.HTTP_200_OK
+            )
+
+    except Exception as e:
+        return JsonResponse({"status": str(e)}, status=status.HTTP_200_OK)
+
+
+
+
+@api_view(['DELETE'])
+def delete_user_activity_record(request):
+    # authentication_classes = [JWTAuthentication]
+    # permission_classes = [IsAuthenticated]
+    # if request.user.is_authenticated:
+
+    try:
+
+        usr_activity_record = User_tracking.objects.get(user_id=request.query_params.get('user_id'),date_of_activity=request.query_params.get('date_of_activity'))
+        if usr_activity_record is not None:
+            usr_activity_record.delete()
+
+            return JsonResponse({"status": "user_activity_record_deleted"})
+    except  usr_activity_record.DoesNotExist:
+        return JsonResponse({"status": "user_activity_record_does_not_exist"})
+
+
+    finally:
+        print("execution_completed")
+    # else:
+    #     return JsonResponse({"status": "unauthorized_user"})
+
+
+

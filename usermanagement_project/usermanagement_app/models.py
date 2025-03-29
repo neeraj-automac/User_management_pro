@@ -1,3 +1,4 @@
+import datetime
 from datetime import timedelta
 from datetime import time
 from django.contrib.postgres.fields import ArrayField
@@ -6,9 +7,10 @@ from django.db import models
 from django.db.models.fields import PositiveSmallIntegerField
 from django.db.models.fields import EmailField
 from django.contrib.auth.models import User
+from django.db.models.functions import Coalesce
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.db.models import Min, Max
+from django.db.models import Min, Max, Sum, Count, Q
 from django.core.mail import send_mail
 from django.conf import settings
 from django.http import JsonResponse
@@ -33,25 +35,105 @@ class User_details(models.Model):
     user_id = models.OneToOneField(User, on_delete=models.CASCADE )
     ROLE_STATUS_CHOICES = (('admin', 'admin'), ('customer', 'customer'))
     role = models.CharField(max_length=15, choices=ROLE_STATUS_CHOICES)
-    name=models.CharField(max_length = 50,blank=False)
-    contact_no = models.BigIntegerField(null=False, blank=False)
-    user_status=models.CharField(max_length = 50,blank=True)
+    name=models.CharField(max_length = 50,blank=True)#False
+    contact_no = models.BigIntegerField(null=True, blank=True)#False,False
+    user_status=models.CharField(max_length = 50,blank=True)#False
     category=models.ForeignKey(Category, on_delete=models.CASCADE)
     # company = models.CharField(max_length = 30,blank=True)#remove?
-    business_email = models.EmailField(max_length = 254,blank=False)
+    business_email = models.EmailField(max_length = 254,blank=True)
     # years_of_experience = models.PositiveSmallIntegerField(null=True, blank=True)#remove?
     # job_position = models.CharField(max_length = 30,blank=True)#remove?
-    location = models.CharField(max_length = 30,blank=False)
-    age = models.PositiveIntegerField()
-    gender = models.CharField(max_length=150)
-    how_did_you_learn_about_us=  models.CharField(max_length=500,blank=False)
-    type_of_challange=  models.CharField(max_length=500,blank=False)
-    goal=  models.TextField(blank=False)
-    # otp = models.CharField(max_length=255, unique=True, blank=True, null=True)
-    # course_id=models.IntegerField(null=True, blank=True)
+    location = models.CharField(max_length = 30,blank=True)#False
+    age = models.PositiveIntegerField(null=True)
+    gender = models.CharField(max_length=150,blank=True)
+    how_did_you_learn_about_us=  models.CharField(max_length=500,blank=True)#False
+    type_of_challange=  models.CharField(max_length=500,blank=True)#False
+    goal=  models.TextField(blank=True)#False
+    date_of_joining = models.DateField(
+        blank=True,
+        null=True,
+        help_text="Date when the person joined"
+    )
+    # Suitable for storing calendar dates; null=True needed with blank=True for proper DB handling
 
+    height = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Height in centimeters (e.g., 175.50)"
+    )
+    # DecimalField good for precise measurements; max_digits=5 allows up to 999.99 cm
 
+    weight = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Weight in kilograms (e.g., 70.50)"
+    )
+    # DecimalField for precise weight; max_digits=5 allows up to 999.99 kg
 
+    body_type = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="E.g., ectomorph, mesomorph, endomorph"
+    )
+    # CharField for descriptive text; max_length=50 should be sufficient
+
+    blood_test = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Blood test results or type"
+    )
+    # CharField as this could contain various formats of results
+
+    bone_density = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Bone density measurement"
+    )
+    # DecimalField for numerical measurement with precision
+
+    body_fatpercentage = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        blank=True,
+        null=True,
+        help_text="Body fat percentage (e.g., 22.5)"
+    )
+    # DecimalField; max_digits=4 allows 0.0-99.9%
+
+    muscle_mass = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Muscle mass in kilograms"
+    )
+    # DecimalField for precise measurement
+
+    any_physical_limitations = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Description of any physical limitations"
+    )
+    # TextField for longer descriptive text
+
+    any_concerns = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Any health or other concerns"
+    )
+
+    Total_attendance=models.IntegerField(default=0,null=True,blank=True)
+    Total_water_intake=models.FloatField(default=0.0,blank=True)
+    Total_step_count=models.IntegerField(default=0,null=True, blank=True)
+    Total_workout_duration = models.DurationField(blank=True, null=True)
 
     def __str__(self):
         return self.user_id.username
@@ -368,65 +450,148 @@ def send_broadcast(sender, instance, created, **kwargs):
 
 
 
+#
+# class BulkUserUploadView(APIView):
+#     permission_classes = [permissions.AllowAny]  # Adjust based on requirements
+#
+#     def post(self, request, *args, **kwargs):
+#         file = request.FILES.get('file')  # Expecting an Excel file
+#         if not file:
+#             return JsonResponse({"error": "No file uploaded"}, status=400)
+#
+#         try:
+#             wb = openpyxl.load_workbook(file)
+#             sheet = wb.active  # Get the first sheet
+#
+#             users_created = []
+#             errors = []
+#
+#             # Assuming the Excel file has headers:
+#             # ["username", "name", "contact_no", "business_email", "location", "age", "gender", "category", "user_status"]
+#             for row in sheet.iter_rows(min_row=2, values_only=True):
+#                 username, name, contact_no, business_email, location, age, gender, category_name, user_status = row
+#
+#                 # Validate required fields
+#                 if not all([username, name, contact_no, business_email, location, age, gender, category_name, user_status]):
+#                     errors.append({"row": row, "error": "Missing required fields"})
+#                     continue
+#
+#                 # Validate category existence
+#                 try:
+#                     category = Category.objects.get(category=category_name)  # Adjust field name if necessary
+#                 except Category.DoesNotExist:
+#                     errors.append({"row": row, "error": f"Category '{category_name}' not found"})
+#                     continue
+#
+#                 # Prepare user data
+#                 user_data = {
+#                     "username": username,
+#                     "name": name,
+#                     "contact_no": contact_no,
+#                     "business_email": business_email,
+#                     "location": location,
+#                     "age": age,
+#                     "gender": gender,
+#                     "category": category.id,  # Use category ID
+#                     "user_status": user_status
+#                 }
+#
+#                 # Validate and save user using the serializer
+#                 serializer = User_create_Serializer(data=user_data)
+#                 if serializer.is_valid():
+#                     serializer.save()
+#                     users_created.append(username)
+#                 else:
+#                     errors.append({"row": row, "error": serializer.errors})
+#
+#             return JsonResponse(
+#                 {"message": "User creation completed", "users_created": users_created, "errors": errors},
+#                 status=status.HTTP_201_CREATED
+#             )
+#
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-class BulkUserUploadView(APIView):
-    permission_classes = [permissions.AllowAny]  # Adjust based on requirements
+#
+# class User_details(models.Model):
+#     objects = models.Manager()
+#     user_id = models.OneToOneField(User, on_delete=models.CASCADE )
+#     ROLE_STATUS_CHOICES = (('admin', 'admin'), ('customer', 'customer'))
+#     role = models.CharField(max_length=15, choices=ROLE_STATUS_CHOICES)
+#     name=models.CharField(max_length = 50,blank=False)
+#     contact_no = models.BigIntegerField(null=False, blank=False)
+#     user_status=models.CharField(max_length = 50,blank=True)
+#     category=models.ForeignKey(Category, on_delete=models.CASCADE)
+#     # company = models.CharField(max_length = 30,blank=True)#remove?
+#     business_email = models.EmailField(max_length = 254,blank=False)
+#     # years_of_experience = models.PositiveSmallIntegerField(null=True, blank=True)#remove?
+#     # job_position = models.CharField(max_length = 30,blank=True)#remove?
+#     location = models.CharField(max_length = 30,blank=False)
+#     age = models.PositiveIntegerField()
+#     gender = models.CharField(max_length=150)
+#     how_did_you_learn_about_us=  models.CharField(max_length=500,blank=False)
+#     type_of_challange=  models.CharField(max_length=500,blank=False)
+#     goal=  models.TextField(blank=False)
+#     # otp = models.CharField(max_length=255, unique=True, blank=True, null=True)
+#     # course_id=models.IntegerField(null=True, blank=True)
+#
+#
+#
+#
+#     def __str__(self):
+#         return self.user_id.username
 
-    def post(self, request, *args, **kwargs):
-        file = request.FILES.get('file')  # Expecting an Excel file
-        if not file:
-            return JsonResponse({"error": "No file uploaded"}, status=400)
 
-        try:
-            wb = openpyxl.load_workbook(file)
-            sheet = wb.active  # Get the first sheet
 
-            users_created = []
-            errors = []
+class User_tracking(models.Model):
+    objects = models.Manager()
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE )
+    category=models.ForeignKey(Category, on_delete=models.CASCADE)
+    date_of_activity=models.DateField()
+    day_count = models.IntegerField(null=True, blank=True)#False,False
+    step_count = models.IntegerField(null=True, blank=True)#False,False
+    diet=models.JSONField(blank=True)
+    Exercises = models.TextField(blank=True)
+    water_in_liters = models.FloatField(blank=True)
+    hours_of_sleep=  models.TimeField(blank=True)#False
+    workout_duration=  models.TimeField(blank=True)#False
+    calories_initial=  models.FloatField(blank=True)#False
+    calories_burn= models.FloatField(blank=True)#False
+    just_relief_activity=  models.CharField(max_length=500,blank=True)#False
 
-            # Assuming the Excel file has headers:
-            # ["username", "name", "contact_no", "business_email", "location", "age", "gender", "category", "user_status"]
-            for row in sheet.iter_rows(min_row=2, values_only=True):
-                username, name, contact_no, business_email, location, age, gender, category_name, user_status = row
+    def __str__(self):
+        return self.user_id.username
 
-                # Validate required fields
-                if not all([username, name, contact_no, business_email, location, age, gender, category_name, user_status]):
-                    errors.append({"row": row, "error": "Missing required fields"})
-                    continue
 
-                # Validate category existence
-                try:
-                    category = Category.objects.get(category=category_name)  # Adjust field name if necessary
-                except Category.DoesNotExist:
-                    errors.append({"row": row, "error": f"Category '{category_name}' not found"})
-                    continue
 
-                # Prepare user data
-                user_data = {
-                    "username": username,
-                    "name": name,
-                    "contact_no": contact_no,
-                    "business_email": business_email,
-                    "location": location,
-                    "age": age,
-                    "gender": gender,
-                    "category": category.id,  # Use category ID
-                    "user_status": user_status
-                }
 
-                # Validate and save user using the serializer
-                serializer = User_create_Serializer(data=user_data)
-                if serializer.is_valid():
-                    serializer.save()
-                    users_created.append(username)
-                else:
-                    errors.append({"row": row, "error": serializer.errors})
 
-            return JsonResponse(
-                {"message": "User creation completed", "users_created": users_created, "errors": errors},
-                status=status.HTTP_201_CREATED
-            )
 
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+@receiver(post_save, sender=User_tracking)
+def update_user_details_totals(sender, instance, created, **kwargs):
+    user = instance.user_id  # Get the related user
+
+    # Calculate sums for numeric fields
+    totals = User_tracking.objects.filter(user_id=user).aggregate(
+        total_water=Coalesce(Sum('water_in_liters'), 0.0),
+        total_attendance=Count('id'),
+        total_step_count=Coalesce(Sum('step_count'), 0),
+    )
+
+    # Handle TimeField aggregation (convert to seconds, sum, then convert back)
+    workout_durations = User_tracking.objects.filter(user_id=user).values_list('workout_duration', flat=True)
+    total_seconds = sum((t.hour * 3600 + t.minute * 60 + t.second) if t else 0 for t in workout_durations)
+    total_workout_duration = timedelta(seconds=total_seconds)
+    # user_details.Total_workout_duration = total_workout_duration
+
+    # Get or create the corresponding User_details record
+    user_details, _ = User_details.objects.get_or_create(user_id=user)
+
+    # Update fields in User_details
+    user_details.Total_water_intake = totals['total_water']
+    user_details.Total_attendance = totals['total_attendance']
+    user_details.Total_step_count = totals['total_step_count']
+    user_details.Total_workout_duration = total_workout_duration
+    user_details.save()
+
 

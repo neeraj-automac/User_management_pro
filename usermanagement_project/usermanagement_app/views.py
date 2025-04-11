@@ -167,42 +167,54 @@ def delete_users(request):
 #
 #     # else:
 #     #     return JsonResponse({"status": "unauthorized_user"})
+
 @api_view(['GET'])
 def pagination(request):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
-    # if request.user.is_authenticated:
     if request.method == "GET":
         page_number = request.query_params.get("page", 1)
+        page_size = 10  # Match page size with user_challenge_records_pagination
+
+        # Validate page number
         try:
             page_number = int(page_number)
-            if page_number <= 0:
-                raise ValueError
+            if page_number < 1:
+                return JsonResponse({"status": "invalid_page_number"}, status=200)
         except ValueError:
-            return JsonResponse({"status": "invalid_page_number"})
+            return JsonResponse({"status": "invalid_page_number"}, status=200)
 
-        # Get the list of contacts filtered by a condition
-        # contact_list = User_details.objects.filter(user_id__username__contains='_hct').order_by('-id')
+        # Get the list of contacts
         contact_list = User_details.objects.all().order_by('-id')
-        print('contact_list', contact_list)
 
         # Paginate the queryset
-        paginator = Paginator(contact_list, 30)  # Show 30 contacts per page
-        page_obj = paginator.get_page(page_number)
-        print('paginator', paginator)
-        print("number of pages", paginator.num_pages, page_obj)
+        paginator = Paginator(contact_list, page_size)
+        total_contacts = paginator.count  # Total number of records
+        total_pages = paginator.num_pages  # Total number of pages
+
+        # Get the page object
+        try:
+            page_obj = paginator.page(page_number)
+        except:
+            return JsonResponse({"status": "page_not_found"}, status=200)
 
         # Serialize the paginated data
         page_serializer = UserDetails_pagination_Serializer(page_obj, many=True)
-        print("page_serializer.data", page_serializer.data)
 
-        return JsonResponse({"number_of_pages": paginator.num_pages, "page_obj": page_serializer.data})
+        # Calculate next and previous pages
+        next_page = page_number + 1 if page_obj.has_next() else None
+        previous_page = page_number - 1 if page_obj.has_previous() else None
+
+        # Construct response
+        response = {
+            "number_of_pages": total_pages,
+            "current_page": page_number,
+            "next_page": next_page,
+            "previous_page": previous_page,
+            "page_obj": page_serializer.data
+        }
+
+        return JsonResponse(response, status=200)
     else:
-        return JsonResponse({"status": "not get req"})
-
-
-    # else:
-    #     return JsonResponse({"status": "unauthorized_user"})
+        return JsonResponse({"status": "method_not_allowed"}, status=405)
 
 
 # hct
@@ -1029,7 +1041,8 @@ def user_challenge_records_pagination(request):
         # print(serializer)
         # print(serializer.data)
         # Calculate the total number of pages
-        total_broadcasts = User_tracking.objects.count()
+        # total_broadcasts = User_tracking.objects.count()
+        total_broadcasts = User_tracking.objects.filter(user_id=request.query_params.get("user_id")).count()
         total_pages = (total_broadcasts + page_size - 1) // page_size
 
         response = {

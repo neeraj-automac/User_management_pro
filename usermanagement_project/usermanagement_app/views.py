@@ -1195,4 +1195,27 @@ def delete_user_activity_record(request):
     #     return JsonResponse({"status": "unauthorized_user"})
 
 
+@api_view(['GET'])
+def user_challenge_records_all(request):
+    if request.method == "GET":
+        # Fetch all records for the specified user
+        user_id = request.query_params.get("user_id")
+        if not user_id:
+            return JsonResponse({"status": "missing_user_id"}, status=400)
 
+        broadcast_list = User_tracking.objects.filter(user_id=user_id).order_by('-id')
+
+        # Check if there are any records
+        if not broadcast_list:
+            return JsonResponse({"status": "no_records_found"}, status=200)
+
+        serializer = UserTrackingSerializer(broadcast_list, many=True)
+
+        response = {
+            "total_records": broadcast_list.count(),
+            "user_daily_activity_records": serializer.data
+        }
+
+        return JsonResponse(response, status=200)
+    else:
+        return JsonResponse({"status": "method_not_allowed"}, status=405)

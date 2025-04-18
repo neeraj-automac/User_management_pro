@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-8&jk1&!b(j^1c)@l2)1p4h+d7pytk(r+(tl-m%y211l3s5w#mw
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.1.19","192.168.0.110","192.168.29.220","192.168.46.147","127.0.0.1","192.168.0.106","13.235.2.182","52.66.202.25","192.168.137.8","192.168.137.186","hct.automactechnologies.in","192.168.46.147"]
+ALLOWED_HOSTS = ["192.168.1.19","192.168.0.107","192.168.0.110","192.168.29.220","192.168.46.147","127.0.0.1","192.168.0.106","13.235.2.182","52.66.202.25","192.168.137.8","192.168.137.186","hct.automactechnologies.in","192.168.46.147"]
 
 CORS_ALLOWED_ORIGINS = [
 

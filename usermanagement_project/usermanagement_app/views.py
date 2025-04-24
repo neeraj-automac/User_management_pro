@@ -943,7 +943,8 @@ def challenge_pagination(request):
         # print(serializer)
         # print(serializer.data)
         # Calculate the total number of pages
-        total_broadcasts = User_details.objects.count()
+        # total_broadcasts = User_details.objects.count()
+        total_broadcasts =len(broadcast_list)
         total_pages = (total_broadcasts + page_size - 1) // page_size
 
         response = {
@@ -1224,3 +1225,44 @@ def user_challenge_records_all(request):
         return JsonResponse(response, status=200)
     else:
         return JsonResponse({"status": "method_not_allowed"}, status=405)
+
+
+@api_view(['POST'])
+def category_create(request):
+    # Validate category field
+    category = request.data.get('category', '').strip()
+    if not category:
+        return JsonResponse(
+            {
+                "status": "Category_name_cannot_be_empty."
+
+            }
+        )
+
+    # Check for duplicate category (case-insensitive)
+    if Category.objects.filter(category__iexact=category).exists():
+        return JsonResponse(
+            {
+                "status": "Category_already_exists."
+
+            }
+        )
+
+    # Serialize and save
+    serializer = category_Serializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return JsonResponse(
+            {
+                "status": "Category_created_successfully",
+
+            }
+        )
+
+    # Handle any other serializer errors
+    return JsonResponse(
+        {
+            "status": "Failed_to_create_category",
+            "errors": serializer.errors
+        }
+    )

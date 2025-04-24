@@ -56,7 +56,10 @@ def all_users_status(request):
     if request.method == 'GET':
         # Get all categories and their user count
         category_counts = (
-            User_details.objects.values('category__category')
+            # User_details.objects.values('category__category')
+            # .annotate(count=Count('id'))
+            User_details.objects.filter(user_status="active")
+            .values('category__category')
             .annotate(count=Count('id'))
         )
 
@@ -915,6 +918,8 @@ def challenge_pagination(request):
     if request.method == "GET":
         page = request.query_params.get("page", 1)
         page_size = 10  # Change this to the number of records you want per page
+        # param_category="100days_challenge"
+        param_category=request.query_params.get("category")
 
         try:
             page = int(page)
@@ -927,7 +932,7 @@ def challenge_pagination(request):
         end_index = page * page_size
 
         # Fetch only the records for the current page
-        broadcast_list = User_details.objects.filter(category__category="100days_challenge").order_by('-id')[start_index:end_index]
+        broadcast_list = User_details.objects.filter(user_status="active",category__category=param_category).order_by('-id')[start_index:end_index]
         print('broadcast_list',broadcast_list)
 
         # Check if there are no records for the given page

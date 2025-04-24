@@ -40,7 +40,7 @@ admin.site.register(User,UserDetailsAdmin)
 
 @admin.register(User_details)
 class User_detailsAdmin(admin.ModelAdmin):
-    list_display = ['id','user_id','name','category']
+    list_display = ['id','user_id','user_status','name','category']
 
 # @admin.register(User_registration)
 # class User_registrationAdmin(admin.ModelAdmin):

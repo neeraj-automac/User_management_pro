@@ -76,6 +76,7 @@ class User_create_Serializer(serializers.ModelSerializer):
     muscle_mass = serializers.DecimalField(max_digits=5, decimal_places=2, allow_null=True, default=None)
     any_physical_limitations = serializers.CharField(allow_blank=True, allow_null=True)
     any_concerns = serializers.CharField(allow_blank=True, allow_null=True)
+    date_of_birth = serializers.DateField(allow_null=True, required=False)
 
     class Meta:
         model = User
@@ -84,7 +85,7 @@ class User_create_Serializer(serializers.ModelSerializer):
             'name', 'contact_no', 'business_email', 'location', 'age', 'gender', 'category',
             'how_did_you_learn_about_us', 'type_of_challange', 'goal', 'date_of_joining',
             'height', 'weight', 'body_type', 'blood_test', 'bone_density', 'body_fatpercentage',
-            'muscle_mass', 'any_physical_limitations', 'any_concerns'
+            'muscle_mass', 'any_physical_limitations', 'any_concerns','date_of_birth'
         ]
     def create(self, validated_data):
         # Pop fields for User_details
@@ -109,6 +110,7 @@ class User_create_Serializer(serializers.ModelSerializer):
             'muscle_mass': validated_data.pop('muscle_mass'),
             'any_physical_limitations': validated_data.pop('any_physical_limitations'),
             'any_concerns': validated_data.pop('any_concerns'),
+            'date_of_birth': validated_data.pop('date_of_birth', None),
         }
 
         # Create User
@@ -171,7 +173,7 @@ class UserDetails_pagination_Serializer(serializers.ModelSerializer):
 'Total_attendance',
 'Total_water_intake',
 'Total_step_count',
-'Total_workout_duration']
+'Total_workout_duration','date_of_birth']
 
 
 class UserDetails_business_email_Serializer(serializers.ModelSerializer):
@@ -294,7 +296,7 @@ class UserDetailsSerializer(serializers.ModelSerializer):
             'bone_density', 'body_fatpercentage', 'muscle_mass',
             'any_physical_limitations', 'any_concerns', 'role', 'user_status',
             'Total_attendance', 'Total_water_intake', 'Total_step_count',
-            'Total_workout_duration'
+            'Total_workout_duration','date_of_birth'
         ]
         read_only_fields = ['user_id']  # Prevent updating the user_id field
 

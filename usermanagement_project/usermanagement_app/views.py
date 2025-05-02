@@ -911,15 +911,10 @@ def send_message_template(request):
 #https://hct.automactechnologies.in/
 @api_view(['GET'])
 def challenge_pagination(request):
-    # authentication_classes = [JWTAuthentication]
-    # permission_classes = [IsAuthenticated]
-    # if request.user.is_authenticated:
-
     if request.method == "GET":
         page = request.query_params.get("page", 1)
         page_size = 10  # Change this to the number of records you want per page
-        # param_category="100days_challenge"
-        param_category=request.query_params.get("category")
+        param_category = request.query_params.get("category")
 
         try:
             page = int(page)
@@ -932,19 +927,16 @@ def challenge_pagination(request):
         end_index = page * page_size
 
         # Fetch only the records for the current page
-        broadcast_list = User_details.objects.filter(user_status="active",category__category=param_category).order_by('-id')[start_index:end_index]
-        print('broadcast_list',broadcast_list)
+        broadcast_list = User_details.objects.filter(user_status="active", category__category=param_category).order_by('-id')[start_index:end_index]
 
         # Check if there are no records for the given page
         if not broadcast_list:
             return JsonResponse({"status": "page_not_found"}, status=200)
 
         serializer = challange_Serializer(broadcast_list, many=True)
-        # print(serializer)
-        # print(serializer.data)
+
         # Calculate the total number of pages
-        # total_broadcasts = User_details.objects.count()
-        total_broadcasts =len(broadcast_list)
+        total_broadcasts = User_details.objects.filter(user_status="active", category__category=param_category).count()
         total_pages = (total_broadcasts + page_size - 1) // page_size
 
         response = {
@@ -952,15 +944,13 @@ def challenge_pagination(request):
             "current_page": page,
             "next_page": page + 1 if end_index < total_broadcasts else None,
             "previous_page": page - 1 if start_index > 0 else None,
-            "challenge_records": serializer.data
+            "challenge_records": serializer.data,
+            "no_of_records": len(serializer.data)
         }
 
         return JsonResponse(response, status=200)
     else:
         return JsonResponse({"status": "method_not_allowed"}, status=405)
-    # else:
-    #     return JsonResponse({"status": "unauthorized_user"})
-
 #
 # @api_view(['PATCH'])
 # def user_onboard(request):
@@ -1134,12 +1124,12 @@ def user_challenge_create_records(request):
 @api_view(['PUT'])
 def update_user_tracking(request):
     try:
-        # Extract user_id and date_of_activity to identify the record
+        # Extract user_id, date_of_activity, and new_date_of_activity
         user_id = request.data.get('user_id')
-        print(user_id,type(user_id))
         date_of_activity = request.data.get('date_of_activity')
+        new_date_of_activity = request.data.get('new_date_of_activity')
 
-        # Check if a record exists for the given user_id and date_of_activity
+        # Check if user_id and date_of_activity are provided for fetching record
         if not (user_id and date_of_activity):
             return JsonResponse(
                 {"status": "user_id_and_date_of_activity_are_required"},
@@ -1158,8 +1148,13 @@ def update_user_tracking(request):
                 status=status.HTTP_200_OK
             )
 
+        # Prepare data for update, including new_date_of_activity if provided
+        update_data = request.data.copy()
+        if new_date_of_activity:
+            update_data['date_of_activity'] = new_date_of_activity
+
         # Use serializer to update the record
-        serializer = UserTrackingSerializer(user_tracking, data=request.data, partial=True)
+        serializer = UserTrackingSerializer(user_tracking, data=update_data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return JsonResponse(

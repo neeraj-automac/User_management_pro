@@ -29,11 +29,46 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 
-
 class user_details_serializer(serializers.ModelSerializer):
+
     class Meta:
         model = User_details
-        fields = '__all__'
+        fields = [
+            # Include all existing fields you need
+            'user_id',
+            'role',
+            'name',
+            'contact_no',
+            'user_status',
+            'category',
+            'business_email',
+            'location',
+            'age',
+            'gender',
+            'how_did_you_learn_about_us',
+            'type_of_challange',
+            'goal',
+            'date_of_joining',
+            'height',
+            'weight',
+            'body_type',
+            'blood_test',
+            'bone_density',
+            'body_fatpercentage',
+            'muscle_mass',
+            'any_physical_limitations',
+            'any_concerns',
+            'Total_attendance',
+            'Total_water_intake',
+            'Total_step_count',
+            'Total_workout_duration',  # Optional: include raw duration
+            'date_of_birth'        ]
+
+
+# class user_details_serializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = User_details
+#         fields = '__all__'
 
 
 class user_serializer(serializers.ModelSerializer):
@@ -240,6 +275,8 @@ class challange_Serializer(serializers.ModelSerializer):
     category = serializers.CharField(source='category.category', read_only=True)
     category_id = serializers.CharField(source='category.id', read_only=True)
     user_id = serializers.CharField(source='user_id.id', read_only=True)
+    formatted_workout_duration = serializers.SerializerMethodField()
+
     # date_joined = serializers.DateTimeField(source='user_id.date_joined', read_only=True)
 
     class Meta:
@@ -257,9 +294,12 @@ class challange_Serializer(serializers.ModelSerializer):
             'Total_water_intake',
             'Total_step_count',
             'Total_workout_duration',
-            'goal'
+            'goal',
+            'formatted_workout_duration'
         ]
 
+    def get_formatted_workout_duration(self, obj):
+        return obj.get_formatted_duration()
 
 
 class User_onboard_CreateSerializer(serializers.ModelSerializer):

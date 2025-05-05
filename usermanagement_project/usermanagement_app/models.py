@@ -8,7 +8,7 @@ from django.db.models.fields import PositiveSmallIntegerField
 from django.db.models.fields import EmailField
 from django.contrib.auth.models import User
 from django.db.models.functions import Coalesce
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save,post_delete
 from django.dispatch import receiver
 from django.db.models import Min, Max, Sum, Count, Q
 from django.core.mail import send_mail
@@ -20,6 +20,7 @@ from django.http import JsonResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+import logging
 
 from unicodedata import category
 
@@ -136,6 +137,18 @@ class User_details(models.Model):
     Total_workout_duration = models.DurationField(blank=True, null=True)
     date_of_birth = models.DateField(null=True, blank=True)
 
+    def get_formatted_duration(self):
+        """
+        Returns the total workout duration in HH:MM:SS format,
+        ignoring days and converting them to hours.
+        """
+        if not self.Total_workout_duration:
+            return "00:00:00"
+        total_seconds = int(self.Total_workout_duration.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
     def __str__(self):
         return self.user_id.username
@@ -556,7 +569,7 @@ class User_tracking(models.Model):
     Exercises = models.TextField(blank=True)
     water_in_liters = models.FloatField(blank=True)
     hours_of_sleep=  models.TimeField(blank=True)#False
-    workout_duration=  models.TimeField(blank=True)#False
+    workout_duration=  models.DurationField(blank=True)#False
     calories_initial=  models.FloatField(blank=True)#False
     calories_burn= models.FloatField(blank=True)#False
     just_relief_activity=  models.CharField(max_length=500,blank=True)#False
@@ -569,9 +582,47 @@ class User_tracking(models.Model):
 
 
 
+# @receiver(post_save, sender=User_tracking)
+# def update_user_details_totals(sender, instance, created, **kwargs):
+#     print("inside signal")
+#     user = instance.user_id  # Get the related user
+#
+#     # Calculate sums for numeric fields
+#     totals = User_tracking.objects.filter(user_id=user).aggregate(
+#         total_water=Coalesce(Sum('water_in_liters'), 0.0),
+#         total_attendance=Count('id'),
+#         total_step_count=Coalesce(Sum('step_count'), 0),
+#     )
+#     print("totals records:",totals)
+#
+#     # Handle TimeField aggregation (convert to seconds, sum, then convert back)
+#     workout_durations = User_tracking.objects.filter(user_id=user).values_list('workout_duration', flat=True)
+#     print("User_tracking records:", list(workout_durations),flush=True)
+#     # total_seconds = sum((t.hour * 3600 + t.minute * 60 + t.second) if t else 0 for t in workout_durations)
+#     # total_workout_duration = timedelta(seconds=total_seconds)
+#     total_workout_duration = User_tracking.objects.filter(user_id=user).aggregate(
+#         total_duration=Coalesce(Sum('workout_duration'), timedelta(0))
+#     )['total_duration']
+#     # user_details.Total_workout_duration = total_workout_duration
+#
+#     # Get or create the corresponding User_details record
+#     user_details, _ = User_details.objects.get_or_create(user_id=user)
+#
+#     # Update fields in User_details
+#     user_details.Total_water_intake = totals['total_water']
+#     user_details.Total_attendance = totals['total_attendance']
+#     user_details.Total_step_count = totals['total_step_count']
+#     user_details.Total_workout_duration = total_workout_duration
+#     user_details.save()
+
+
+# logger = logging.getLogger(__name__)
+
+
 @receiver(post_save, sender=User_tracking)
 def update_user_details_totals(sender, instance, created, **kwargs):
-    user = instance.user_id  # Get the related user
+    # logger.info("Signal triggered for user: %s, created: %s", instance.user_id, created)
+    user = instance.user_id
 
     # Calculate sums for numeric fields
     totals = User_tracking.objects.filter(user_id=user).aggregate(
@@ -579,12 +630,17 @@ def update_user_details_totals(sender, instance, created, **kwargs):
         total_attendance=Count('id'),
         total_step_count=Coalesce(Sum('step_count'), 0),
     )
+    # logger.info("Totals records: %s", totals)
 
-    # Handle TimeField aggregation (convert to seconds, sum, then convert back)
+    # Handle DurationField aggregation
     workout_durations = User_tracking.objects.filter(user_id=user).values_list('workout_duration', flat=True)
-    total_seconds = sum((t.hour * 3600 + t.minute * 60 + t.second) if t else 0 for t in workout_durations)
-    total_workout_duration = timedelta(seconds=total_seconds)
-    # user_details.Total_workout_duration = total_workout_duration
+    # logger.info("User_tracking records: %s", list(workout_durations))
+    total_workout_duration = User_tracking.objects.filter(user_id=user).aggregate(
+        total_duration=Coalesce(Sum('workout_duration'), timedelta(0))
+    )['total_duration']
+    # print('total_workout_duration',total_workout_duration)
+    # logger.info("Total workout duration: %s", total_workout_duration)
+    # logger.info("Raw total seconds: %s", total_workout_duration.total_seconds())
 
     # Get or create the corresponding User_details record
     user_details, _ = User_details.objects.get_or_create(user_id=user)
@@ -595,5 +651,26 @@ def update_user_details_totals(sender, instance, created, **kwargs):
     user_details.Total_step_count = totals['total_step_count']
     user_details.Total_workout_duration = total_workout_duration
     user_details.save()
+    # logger.info("User_details updated: %s", user_details)
 
 
+
+@receiver(post_delete, sender=User_tracking)
+def update_user_details_totals_on_delete(sender, instance, **kwargs):
+    user = instance.user_id
+    # Recalculate totals after deletion
+    totals = User_tracking.objects.filter(user_id=user).aggregate(
+        total_water=Coalesce(Sum('water_in_liters'), 0.0),
+        total_attendance=Count('id'),
+        total_step_count=Coalesce(Sum('step_count'), 0),
+    )
+    total_workout_duration = User_tracking.objects.filter(user_id=user).aggregate(
+        total_duration=Coalesce(Sum('workout_duration'), timedelta(0))
+    )['total_duration']
+
+    user_details, _ = User_details.objects.get_or_create(user_id=user)
+    user_details.Total_water_intake = totals['total_water']
+    user_details.Total_attendance = totals['total_attendance']
+    user_details.Total_step_count = totals['total_step_count']
+    user_details.Total_workout_duration = total_workout_duration
+    user_details.save()

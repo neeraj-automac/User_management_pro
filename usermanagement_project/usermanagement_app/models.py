@@ -583,143 +583,135 @@ class User_tracking(models.Model):
 
 
 
-#
+
+
+
 # @receiver(post_save, sender=User_tracking)
 # def update_user_details_totals(sender, instance, created, **kwargs):
-#     # logger.info("Signal triggered for user: %s, created: %s", instance.user_id, created)
 #     user = instance.user_id
 #
-#     # Calculate sums for numeric fields
-#     totals = User_tracking.objects.filter(user_id=user).aggregate(
-#         total_water=Coalesce(Sum('water_in_liters'), 0.0),
-#         total_attendance=Count('id'),
-#         total_step_count=Coalesce(Sum('step_count'), 0),
+#     # Only consider rows where the values are neither None nor zero
+#     active_days = User_tracking.objects.filter(user_id=user).exclude(
+#         Q(step_count__lte=0) | Q(water_in_liters__lte=0) | Q(workout_duration__isnull=True) | Q(workout_duration=timedelta(0))
 #     )
-#     # logger.info("Totals records: %s", totals)
 #
-#     # Handle DurationField aggregation
-#     workout_durations = User_tracking.objects.filter(user_id=user).values_list('workout_duration', flat=True)
-#     # logger.info("User_tracking records: %s", list(workout_durations))
-#     total_workout_duration = User_tracking.objects.filter(user_id=user).aggregate(
-#         total_duration=Coalesce(Sum('workout_duration'), timedelta(0))
-#     )['total_duration']
-#     # print('total_workout_duration',total_workout_duration)
-#     # logger.info("Total workout duration: %s", total_workout_duration)
-#     # logger.info("Raw total seconds: %s", total_workout_duration.total_seconds())
+#     # Calculate averages only for meaningful (non-zero/empty) days
+#     stats = active_days.aggregate(
+#         avg_water=Coalesce(Avg('water_in_liters', output_field=FloatField()), 0.0),
+#         avg_step_count=Coalesce(Avg('step_count', output_field=FloatField()), 0.0),
+#         avg_duration=Coalesce(Avg('workout_duration', output_field=DurationField()), timedelta(0))
+#     )
 #
-#     # Get or create the corresponding User_details record
+#     # Total attendance = all entries, including 0s and empty fields
+#     total_attendance = User_tracking.objects.filter(user_id=user).count()
+#
+#     # Update User_details
 #     user_details, _ = User_details.objects.get_or_create(user_id=user)
+#     user_details.Total_water_intake = stats['avg_water']               # avg water
+#     user_details.Total_step_count = stats['avg_step_count']           # avg steps
+#     user_details.Total_workout_duration = stats['avg_duration']       # avg duration
+#     user_details.Total_attendance = total_attendance                  # total count
 #
-#     # Update fields in User_details
-#     user_details.Total_water_intake = totals['total_water']
-#     user_details.Total_attendance = totals['total_attendance']
-#     user_details.Total_step_count = totals['total_step_count']
-#     user_details.Total_workout_duration = total_workout_duration
 #     user_details.save()
-#     # logger.info("User_details updated: %s", user_details)
-
-
-
-@receiver(post_save, sender=User_tracking)
-def update_user_details_totals(sender, instance, created, **kwargs):
-    user = instance.user_id
-
-    # Only consider rows where the values are neither None nor zero
-    active_days = User_tracking.objects.filter(user_id=user).exclude(
-        Q(step_count__lte=0) | Q(water_in_liters__lte=0) | Q(workout_duration__isnull=True) | Q(workout_duration=timedelta(0))
-    )
-
-    # Calculate averages only for meaningful (non-zero/empty) days
-    stats = active_days.aggregate(
-        avg_water=Coalesce(Avg('water_in_liters', output_field=FloatField()), 0.0),
-        avg_step_count=Coalesce(Avg('step_count', output_field=FloatField()), 0.0),
-        avg_duration=Coalesce(Avg('workout_duration', output_field=DurationField()), timedelta(0))
-    )
-
-    # Total attendance = all entries, including 0s and empty fields
-    total_attendance = User_tracking.objects.filter(user_id=user).count()
-
-    # Update User_details
-    user_details, _ = User_details.objects.get_or_create(user_id=user)
-    user_details.Total_water_intake = stats['avg_water']               # avg water
-    user_details.Total_step_count = stats['avg_step_count']           # avg steps
-    user_details.Total_workout_duration = stats['avg_duration']       # avg duration
-    user_details.Total_attendance = total_attendance                  # total count
-
-    user_details.save()
+# # def update_user_details_totals(sender, instance, created, **kwargs):
+# #     user = instance.user_id
+# #
+# #     stats = User_tracking.objects.filter(user_id=user).aggregate(
+# #         avg_water=Coalesce(Avg('water_in_liters', output_field=FloatField()), 0.0),
+# #         avg_step_count=Coalesce(Avg('step_count', output_field=FloatField()), 0.0),
+# #         total_attendance=Count('id')  # keep as total
+# #     )
+# #
+# #     average_daily_duration = User_tracking.objects.filter(user_id=user).aggregate(
+# #         avg_duration=Coalesce(Avg('workout_duration', output_field=DurationField()), timedelta(0))
+# #     )['avg_duration']
+# #     # Get or create the corresponding User_details record
+# #     user_details, _ = User_details.objects.get_or_create(user_id=user)
+# #
+# #     # Update fields in User_details
+# #     user_details.Total_water_intake = stats['avg_water']
+# #     user_details.Total_step_count = stats['avg_step_count']
+# #     user_details.Total_attendance = stats['total_attendance']
+# #     user_details.Total_workout_duration = average_daily_duration
+# #
+# #     user_details.save()
+#
+#
+#
+#
+# @receiver(post_delete, sender=User_tracking)
 # def update_user_details_totals(sender, instance, created, **kwargs):
 #     user = instance.user_id
 #
-#     stats = User_tracking.objects.filter(user_id=user).aggregate(
-#         avg_water=Coalesce(Avg('water_in_liters', output_field=FloatField()), 0.0),
-#         avg_step_count=Coalesce(Avg('step_count', output_field=FloatField()), 0.0),
-#         total_attendance=Count('id')  # keep as total
+#     # Only consider rows where the values are neither None nor zero
+#     active_days = User_tracking.objects.filter(user_id=user).exclude(
+#         Q(step_count__lte=0) | Q(water_in_liters__lte=0) | Q(workout_duration__isnull=True) | Q(workout_duration=timedelta(0))
 #     )
 #
-#     average_daily_duration = User_tracking.objects.filter(user_id=user).aggregate(
+#     # Calculate averages only for meaningful (non-zero/empty) days
+#     stats = active_days.aggregate(
+#         avg_water=Coalesce(Avg('water_in_liters', output_field=FloatField()), 0.0),
+#         avg_step_count=Coalesce(Avg('step_count', output_field=FloatField()), 0.0),
 #         avg_duration=Coalesce(Avg('workout_duration', output_field=DurationField()), timedelta(0))
-#     )['avg_duration']
-#     # Get or create the corresponding User_details record
-#     user_details, _ = User_details.objects.get_or_create(user_id=user)
+#     )
 #
-#     # Update fields in User_details
-#     user_details.Total_water_intake = stats['avg_water']
-#     user_details.Total_step_count = stats['avg_step_count']
-#     user_details.Total_attendance = stats['total_attendance']
-#     user_details.Total_workout_duration = average_daily_duration
+#     # Total attendance = all entries, including 0s and empty fields
+#     total_attendance = User_tracking.objects.filter(user_id=user).count()
+#
+#     # Update User_details
+#     user_details, _ = User_details.objects.get_or_create(user_id=user)
+#     user_details.Total_water_intake = stats['avg_water']               # avg water
+#     user_details.Total_step_count = stats['avg_step_count']           # avg steps
+#     user_details.Total_workout_duration = stats['avg_duration']       # avg duration
+#     user_details.Total_attendance = total_attendance                  # total count
 #
 #     user_details.save()
-
-
-
-
+# # def update_user_details_totals_on_delete(sender, instance, **kwargs):
+# #     user = instance.user_id
+# #
+# #     stats = User_tracking.objects.filter(user_id=user).aggregate(
+# #         avg_water=Coalesce(Avg('water_in_liters', output_field=FloatField()), 0.0),
+# #         avg_step_count=Coalesce(Avg('step_count', output_field=FloatField()), 0.0),
+# #         total_attendance=Count('id')  # keep as total
+# #     )
+# #
+# #     average_daily_duration = User_tracking.objects.filter(user_id=user).aggregate(
+# #         avg_duration=Coalesce(Avg('workout_duration', output_field=DurationField()), timedelta(0))
+# #     )['avg_duration']
+# #     # Get or create the corresponding User_details record
+# #     user_details, _ = User_details.objects.get_or_create(user_id=user)
+# #
+# #     # Update fields in User_details
+# #     user_details.Total_water_intake = stats['avg_water']
+# #     user_details.Total_step_count = stats['avg_step_count']
+# #     user_details.Total_attendance = stats['total_attendance']
+# #     user_details.Total_workout_duration = average_daily_duration
+# #
+# #     user_details.save()
+#
+@receiver(post_save, sender=User_tracking)
 @receiver(post_delete, sender=User_tracking)
-def update_user_details_totals(sender, instance, created, **kwargs):
+def update_user_details_totals(sender, instance, **kwargs):
+    # Get the user
     user = instance.user_id
 
-    # Only consider rows where the values are neither None nor zero
+    # Filter out "inactive" days
     active_days = User_tracking.objects.filter(user_id=user).exclude(
-        Q(step_count__lte=0) | Q(water_in_liters__lte=0) | Q(workout_duration__isnull=True) | Q(workout_duration=timedelta(0))
+        Q(step_count__lte=0) | Q(water_in_liters__lte=0) |
+        Q(workout_duration__isnull=True) | Q(workout_duration=timedelta(0))
     )
 
-    # Calculate averages only for meaningful (non-zero/empty) days
     stats = active_days.aggregate(
-        avg_water=Coalesce(Avg('water_in_liters', output_field=FloatField()), 0.0),
-        avg_step_count=Coalesce(Avg('step_count', output_field=FloatField()), 0.0),
-        avg_duration=Coalesce(Avg('workout_duration', output_field=DurationField()), timedelta(0))
+        avg_water=Coalesce(Avg('water_in_liters'), 0.0),
+        avg_step_count=Coalesce(Avg('step_count'), 0.0),
+        avg_duration=Coalesce(Avg('workout_duration'), timedelta(0))
     )
 
-    # Total attendance = all entries, including 0s and empty fields
     total_attendance = User_tracking.objects.filter(user_id=user).count()
 
-    # Update User_details
     user_details, _ = User_details.objects.get_or_create(user_id=user)
-    user_details.Total_water_intake = stats['avg_water']               # avg water
-    user_details.Total_step_count = stats['avg_step_count']           # avg steps
-    user_details.Total_workout_duration = stats['avg_duration']       # avg duration
-    user_details.Total_attendance = total_attendance                  # total count
-
+    user_details.Total_water_intake = stats['avg_water']
+    user_details.Total_step_count = stats['avg_step_count']
+    user_details.Total_workout_duration = stats['avg_duration']
+    user_details.Total_attendance = total_attendance
     user_details.save()
-# def update_user_details_totals_on_delete(sender, instance, **kwargs):
-#     user = instance.user_id
-#
-#     stats = User_tracking.objects.filter(user_id=user).aggregate(
-#         avg_water=Coalesce(Avg('water_in_liters', output_field=FloatField()), 0.0),
-#         avg_step_count=Coalesce(Avg('step_count', output_field=FloatField()), 0.0),
-#         total_attendance=Count('id')  # keep as total
-#     )
-#
-#     average_daily_duration = User_tracking.objects.filter(user_id=user).aggregate(
-#         avg_duration=Coalesce(Avg('workout_duration', output_field=DurationField()), timedelta(0))
-#     )['avg_duration']
-#     # Get or create the corresponding User_details record
-#     user_details, _ = User_details.objects.get_or_create(user_id=user)
-#
-#     # Update fields in User_details
-#     user_details.Total_water_intake = stats['avg_water']
-#     user_details.Total_step_count = stats['avg_step_count']
-#     user_details.Total_attendance = stats['total_attendance']
-#     user_details.Total_workout_duration = average_daily_duration
-#
-#     user_details.save()
-

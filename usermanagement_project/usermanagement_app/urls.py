@@ -28,6 +28,7 @@ urlpatterns = [
     path('delete_onboard_user/', views.delete_onboard_user, name='user_onboard'),
     path('user_challenge_records/', views.user_challenge_records_pagination, name='user_challenge_records_pagination'),
     path('user_challenge_create_records/', views.user_challenge_create_records, name='user_challenge_create_records'),
+    path('userr_challenge_create_records/', views.userr_challenge_create_records, name='user_challenge_create_records'),
     path('update_user_tracking/', views.update_user_tracking, name='update_user_tracking'),
     path('delete_user_activity_record/', views.delete_user_activity_record, name='delete_user_activity_record'),
     path('user_challenge_records_all/', views.user_challenge_records_all, name='user_challenge_records_all'),

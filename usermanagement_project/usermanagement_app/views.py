@@ -1121,6 +1121,73 @@ def user_challenge_create_records(request):
         )
 
 
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def userr_challenge_create_records(request):
+    try:
+        # Extract user_id and date_of_activity from request data
+        user_id = request.data.get('user_id')
+        date_of_activity = request.data.get('date_of_activity')
+
+        # Validate user_id and date_of_activity
+        if not user_id or not date_of_activity:
+            return Response(
+                {"status": "user_id_and_date_of_activity_required"},
+                status=status.HTTP_200_OK
+            )
+
+        # Convert user_id to User instance if necessary (assuming user_id is an ID)
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"status": "user_not_found"},
+                status=status.HTTP_200_OK
+            )
+
+        # Parse date_of_activity to ensure it's in the correct format
+        try:
+            parsed_date = datetime.strptime(date_of_activity, '%Y-%m-%d').date()
+        except ValueError:
+            return Response(
+                {"status": "invalid_date_format_use_YYYY-MM-DD"},
+                status=status.HTTP_200_OK
+            )
+
+        # Check if a record exists for the given user_id and date_of_activity
+        existing_record = User_tracking.objects.filter(
+            user_id=user,
+            date_of_activity=parsed_date
+        ).exists()
+
+        if existing_record:
+            return Response(
+                {"status": "record_already_exists_for_this_user_and_date"},
+                status=status.HTTP_200_OK
+            )
+
+        # Use serializer for validation and creation
+        serializer = UserTrackingSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return JsonResponse(
+                {"status": "user_tracking_created"},
+                status=status.HTTP_201_CREATED
+            )
+        else:
+            return JsonResponse(
+                {"status": "invalid_data", "errors": serializer.errors},
+                status=status.HTTP_200_OK
+            )
+
+    except Exception as e:
+        return JsonResponse(
+            {"status": f"error: {str(e)}"},
+            status=status.HTTP_200_OK
+        )
+
+
 @api_view(['PUT'])
 def update_user_tracking(request):
     try:

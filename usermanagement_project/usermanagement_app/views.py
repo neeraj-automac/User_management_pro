@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from django.http import HttpResponse, JsonResponse
 import random
 from django.db.models import Q,Count
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import requests
@@ -1122,8 +1123,10 @@ def user_challenge_create_records(request):
 
 
 
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def userr_challenge_create_records(request):
     try:
         # Extract user_id and date_of_activity from request data

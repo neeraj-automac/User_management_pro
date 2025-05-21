@@ -111,3 +111,7 @@ class User_trackingAdmin(admin.ModelAdmin):
 #             return f"{hours}h {minutes}m"
 #         return "-"
 #     formatted_total_workout_duration.short_description = 'Total Workout Duration'
+
+
+
+
